@@ -47,7 +47,7 @@ namespace Domain.Entities
     {
         Assigned,
         Submitted,
-        Reviewed,
+        Processing,
         Completed
     }
 }

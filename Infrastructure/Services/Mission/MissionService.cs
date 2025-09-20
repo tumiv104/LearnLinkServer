@@ -1,0 +1,205 @@
+﻿using Application.DTOs.Mission;
+using Application.Interfaces.Missions;
+using Domain.Entities;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Application.DTOs.Common;
+namespace Infrastructure.Services.Missions
+{
+    public class MissionService : IMissionService
+    {
+        private readonly LearnLinkDbContext _context;
+
+        public MissionService(LearnLinkDbContext context)
+        {
+            _context = context;
+        }
+
+        // Parent giao nhiệm vụ cho con
+        public async Task<AssignMissionResult> AssignMissionAsync(string parentEmail, MissionAssignDTO dto)
+        {
+            var parent = await _context.Users
+                .Include(u => u.ParentRelations)
+                .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == (int)RoleEnum.Parent);
+
+            if (parent == null)
+                return new AssignMissionResult(false, "Parent not found");
+
+            int parentId = parent.userId;
+
+            var isChild = parent.ParentRelations.Any(pc => pc.ChildId == dto.ChildId);
+            if (!isChild)
+                return new AssignMissionResult(false, "Child does not belong to this Parent");
+
+            if (dto.Deadline < DateTime.UtcNow)
+                return new AssignMissionResult(false, "Deadline cannot be in the past");
+
+            if (dto.Points < 0)
+                return new AssignMissionResult(false, "Points cannot be negative");
+
+            var mission = new Domain.Entities.Mission
+            {
+                ParentId = parentId,
+                ChildId = dto.ChildId,
+                Title = dto.Title,
+                Description = dto.Description,
+                Points = dto.Points,
+                Promise = dto.Promise,
+                Punishment = dto.Punishment,
+                Deadline = dto.Deadline,
+                AttachmentUrl = dto.AttachmentUrl ?? "no-attachment",
+                Status = MissionStatus.Assigned,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Missions.Add(mission);
+            await _context.SaveChangesAsync();
+
+            return new AssignMissionResult(true, "Mission assigned successfully");
+        }
+
+
+
+
+        // Parent xem danh sách nhiệm vụ của các con mình
+        public async Task<PageResultDTO<MissionResponseDTO>> ParentGetMissionsAsync(
+     string parentEmail, int page = 1, int pageSize = 5)
+        {
+            var parent = await _context.Users
+                .Include(u => u.ParentRelations)
+                .ThenInclude(pc => pc.Child)
+                .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == (int)RoleEnum.Parent);
+
+            int pageNumber = page < 1 ? 1 : page;
+            int pageSizeNumber = pageSize < 1 ? 5 : pageSize;
+
+            if (parent == null)
+                return new PageResultDTO<MissionResponseDTO>
+                {
+                    Items = new List<MissionResponseDTO>(),
+                    PageNumber = pageNumber,
+                    PageSize = pageSizeNumber,
+                    TotalPages = 0,
+                    TotalCount = 0
+                };
+
+            var childIds = parent.ParentRelations.Select(pc => pc.ChildId).ToList();
+            if (!childIds.Any())
+                return new PageResultDTO<MissionResponseDTO>
+                {
+                    Items = new List<MissionResponseDTO>(),
+                    PageNumber = pageNumber,
+                    PageSize = pageSizeNumber,
+                    TotalPages = 0,
+                    TotalCount = 0
+                };
+
+            var query = _context.Missions
+                .Where(m => childIds.Contains(m.ChildId))
+                .OrderByDescending(m => m.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSizeNumber);
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSizeNumber)
+                .Take(pageSizeNumber)
+                .Select(m => new MissionResponseDTO
+                {
+                    MissionId = m.MissionId,
+                    Title = m.Title,
+                    Description = m.Description,
+                    Points = m.Points,
+                    Deadline = m.Deadline,
+                    Status = (int)m.Status,
+                    StatusName = m.Status.ToString(),
+                    CreatedAt = m.CreatedAt,
+                    ChildId = m.ChildId
+                })
+                .ToListAsync();
+
+            int serialStart = (pageNumber - 1) * pageSizeNumber;
+            for (int i = 0; i < items.Count; i++)
+            {
+                items[i].SerialNumber = serialStart + i + 1;
+            }
+
+            return new PageResultDTO<MissionResponseDTO>
+            {
+                Items = items,
+                PageNumber = pageNumber,
+                PageSize = pageSizeNumber,
+                TotalPages = totalPages,
+                TotalCount = totalCount
+            };
+
+        }
+
+
+        // Child xem danh sách nhiệm vụ của mình
+        public async Task<PageResultDTO<MissionResponseDTO>> ChildGetMissionsAsync(
+     string childEmail, int page = 1, int pageSize = 5)
+        {
+            // Lấy thông tin user là Child
+            var child = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
+
+            int pageNumber = page < 1 ? 1 : page;
+            int pageSizeNumber = pageSize < 1 ? 5 : pageSize;
+
+            if (child == null)
+                return new PageResultDTO<MissionResponseDTO>
+                {
+                    Items = new List<MissionResponseDTO>(),
+                    PageNumber = pageNumber,
+                    PageSize = pageSizeNumber,
+                    TotalPages = 0,
+                    TotalCount = 0
+                };
+
+            int childId = child.userId;
+
+            var query = _context.Missions
+                .Where(m => m.ChildId == childId)
+                .OrderByDescending(m => m.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSizeNumber);
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSizeNumber)
+                .Take(pageSizeNumber)
+                .Select(m => new MissionResponseDTO
+                {
+                    MissionId = m.MissionId,
+                    Title = m.Title,
+                    Description = m.Description,
+                    Points = m.Points,
+                    Deadline = m.Deadline,
+                    Status = (int)m.Status,
+                    StatusName = m.Status.ToString(),
+                    CreatedAt = m.CreatedAt,
+                    ChildId = m.ChildId
+                })
+                .ToListAsync();
+
+            int serialStart = (pageNumber - 1) * pageSizeNumber;
+            for (int i = 0; i < items.Count; i++)
+            {
+                items[i].SerialNumber = serialStart + i + 1;
+            }
+
+            return new PageResultDTO<MissionResponseDTO>
+            {
+                Items = items,
+                PageNumber = pageNumber,
+                PageSize = pageSizeNumber,
+                TotalPages = totalPages,
+                TotalCount = totalCount
+            };
+        }
+
+
+    }
+}
