@@ -85,6 +85,36 @@ namespace Infrastructure.Services.Auth
             };
         }
 
+        public async Task<bool> RegisterChildAsync(ChildRegisterDTO childRegisterDTO)
+        {
+            if (await _context.Users.AnyAsync(u => u.Email == childRegisterDTO.Email)) return false;
+            var child = new User
+            {
+                Name = childRegisterDTO.Name,
+                Email = childRegisterDTO.Email,
+                Password = BCrypt.Net.BCrypt.HashPassword(childRegisterDTO.Password),
+                Dob = childRegisterDTO.Dob,
+                AvatarUrl = childRegisterDTO.AvatarUrl,
+                RoleId = 3,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+            _context.Users.Add(child);
+            await _context.SaveChangesAsync();
+
+            var relation = new ParentChild
+            {
+                ParentId = childRegisterDTO.ParentId,
+                ChildId = child.userId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.ParentChildren.Add(relation);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
         public async Task<bool> RegisterUserAsync(UserRegisterDTO userRegisterDTO)
         {
             if (await _context.Users.AnyAsync(u => u.Email == userRegisterDTO.Email)) return false;

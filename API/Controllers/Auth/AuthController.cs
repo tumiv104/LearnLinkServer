@@ -30,6 +30,18 @@ namespace API.Controllers.Auth
             return OkResponse<object>(null, "register successful");
         }
 
+        [HttpPost("register-child")]
+        public async Task<IActionResult> RegisterChild(ChildRegisterDTO childRegisterDTO)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var success = await _authResponse.RegisterChildAsync(childRegisterDTO);
+            if (!success) return BadRequestResponse("Register failed");
+            return OkResponse<object>(null, "register successful");
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login(UserLoginDTO userLoginDTO)
         {
