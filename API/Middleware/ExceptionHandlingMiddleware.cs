@@ -58,6 +58,7 @@ namespace API.Middleware
                 case InvalidOperationException:
                     statusCode = (int)HttpStatusCode.BadRequest;
                     response = new ApiResponse<object>(false, "Invalid operation", null, ErrorCodes.INVALID_INPUT);
+                    //response = new ApiResponse<object>(false, $"Invalid operation: {exception.Message}", null, ErrorCodes.INVALID_INPUT);
                     break;
 
                 default:
