@@ -77,5 +77,36 @@ namespace API.Controllers.Mission
             var missions = await _missionService.ChildGetMissionsAsync(email, page, 5);
             return OkResponse(missions, "List of your missions");
         }
+
+        // Parent xem chi tiết nhiệm vụ cụ thể của con mình
+        [HttpGet("parent-mission/{id}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<IActionResult> GetParentMissionDetail(int id)
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+
+            var mission = await _missionService.ParentGetMissionDetailAsync(email, id);
+            if (mission == null)
+                return NotFoundResponse("Mission not found or you do not have permission");
+
+            return OkResponse(mission, "Mission detail");
+        }
+
+        // Child xem chi tiết nhiệm vụ cụ thể của mình
+        [HttpGet("child-mission/{id}")]
+        [Authorize(Roles = "Child")]
+        public async Task<IActionResult> GetChildMissionDetail(int id)
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+
+            var mission = await _missionService.ChildGetMissionDetailAsync(email, id);
+            if (mission == null)
+                return NotFoundResponse("Mission not found or you do not have permission");
+
+            return OkResponse(mission, "Mission detail");
+        }
+
     }
 }

@@ -112,8 +112,8 @@ namespace Infrastructure.Services.Missions
                     Description = m.Description,
                     Points = m.Points,
                     Deadline = m.Deadline,
-                    Status = (int)m.Status,
-                    StatusName = m.Status.ToString(),
+                    Status = m.Status.ToString(),
+                    //StatusName = m.Status.ToString(),
                     CreatedAt = m.CreatedAt,
                     ChildId = m.ChildId
                 })
@@ -177,8 +177,8 @@ namespace Infrastructure.Services.Missions
                     Description = m.Description,
                     Points = m.Points,
                     Deadline = m.Deadline,
-                    Status = (int)m.Status,
-                    StatusName = m.Status.ToString(),
+                    Status = m.Status.ToString(),
+                    //StatusName = m.Status.ToString(),
                     CreatedAt = m.CreatedAt,
                     ChildId = m.ChildId
                 })
@@ -200,6 +200,67 @@ namespace Infrastructure.Services.Missions
             };
         }
 
+        public async Task<MissionDetailDTO?> ParentGetMissionDetailAsync(string parentEmail, int missionId)
+        {
+            var parent = await _context.Users
+                .Include(u => u.ParentRelations)
+                .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == (int)RoleEnum.Parent);
+
+            if (parent == null) return null;
+
+            var childIds = parent.ParentRelations.Select(pc => pc.ChildId).ToList();
+            if (!childIds.Any()) return null;
+
+            var mission = await _context.Missions
+                .Where(m => m.MissionId == missionId && childIds.Contains(m.ChildId))
+                .FirstOrDefaultAsync();
+
+            if (mission == null) return null;
+
+            return new MissionDetailDTO
+            {
+                MissionId = mission.MissionId,
+                Title = mission.Title,
+                Description = mission.Description,
+                Points = mission.Points,
+                Deadline = mission.Deadline,
+                Status = mission.Status.ToString(),
+                Promise = mission.Promise,
+                Punishment = mission.Punishment,
+                AttachmentUrl = mission.AttachmentUrl,
+                CreatedAt = mission.CreatedAt,
+                ChildId = mission.ChildId
+            };
+        }
+
+        public async Task<MissionDetailDTO?> ChildGetMissionDetailAsync(string childEmail, int missionId)
+        {
+            var child = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
+
+            if (child == null) return null;
+
+            var mission = await _context.Missions
+                .Where(m => m.MissionId == missionId && m.ChildId == child.userId)
+                .FirstOrDefaultAsync();
+
+            if (mission == null) return null;
+
+            return new MissionDetailDTO
+            {
+                MissionId = mission.MissionId,
+                Title = mission.Title,
+                Description = mission.Description,
+                Points = mission.Points,
+                Deadline = mission.Deadline,
+                Status = mission.Status.ToString(),
+                Promise = mission.Promise,
+                Punishment = mission.Punishment,
+                AttachmentUrl = mission.AttachmentUrl,
+                CreatedAt = mission.CreatedAt,
+                ChildId = mission.ChildId
+            };
+        }
 
     }
 }

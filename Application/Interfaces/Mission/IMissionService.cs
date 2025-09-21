@@ -11,5 +11,7 @@ namespace Application.Interfaces.Missions
         Task<AssignMissionResult> AssignMissionAsync(string parentEmail, MissionAssignDTO dto);
         Task<PageResultDTO<MissionResponseDTO>> ParentGetMissionsAsync(string parentEmail, int page = 1, int pageSize = 5);
         Task<PageResultDTO<MissionResponseDTO>> ChildGetMissionsAsync(string childEmail, int page = 1, int pageSize = 5);
+        Task<MissionDetailDTO?> ParentGetMissionDetailAsync(string parentEmail, int missionId);
+        Task<MissionDetailDTO?> ChildGetMissionDetailAsync(string childEmail, int missionId);
     }
 }

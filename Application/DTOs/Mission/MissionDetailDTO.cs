@@ -6,20 +6,18 @@ using System.Threading.Tasks;
 
 namespace Application.DTOs.Mission
 {
-    public class MissionResponseDTO
+    public class MissionDetailDTO
     {
         public int MissionId { get; set; }
         public string Title { get; set; }
-        public string? Description { get; set; }
+        public string Description { get; set; }
         public int Points { get; set; }
         public DateTime? Deadline { get; set; }
-        public string Status { get; set; }           
-        //public string StatusName { get; set; }    
+        public string Status { get; set; }
+        public string? Promise { get; set; }
+        public string? Punishment { get; set; }
+        public string AttachmentUrl { get; set; }
         public DateTime CreatedAt { get; set; }
-        public int ChildId { get; set; }      
-        public string ChildName { get; set; }
-        public int SerialNumber { get; set; }
+        public int ChildId { get; set; }
     }
-
 }
-
