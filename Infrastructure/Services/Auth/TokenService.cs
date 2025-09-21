@@ -27,6 +27,7 @@ namespace Infrastructure.Services.Auth
         {
             var claims = new[]
             {
+                new Claim("id", user.userId.ToString()),
                 new Claim("email", user.Email),
                 new Claim("role", user.Role.Name),
                 new Claim("name", user.Name)
