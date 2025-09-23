@@ -45,9 +45,9 @@ namespace Domain.Entities
 
     public enum MissionStatus
     {
-        Assigned,
-        Submitted,
-        Processing,
-        Completed
+        Assigned = 0,
+        Submitted = 1,
+        Processing = 2,
+        Completed = 3
     }
 }

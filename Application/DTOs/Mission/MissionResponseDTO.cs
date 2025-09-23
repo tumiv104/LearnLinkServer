@@ -13,8 +13,8 @@ namespace Application.DTOs.Mission
         public string? Description { get; set; }
         public int Points { get; set; }
         public DateTime? Deadline { get; set; }
-        public int Status { get; set; }           
-        public string StatusName { get; set; }    
+        public string Status { get; set; }           
+        //public string StatusName { get; set; }    
         public DateTime CreatedAt { get; set; }
         public int ChildId { get; set; }      
         public string ChildName { get; set; }

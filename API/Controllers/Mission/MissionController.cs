@@ -77,5 +77,69 @@ namespace API.Controllers.Mission
             var missions = await _missionService.ChildGetMissionsAsync(email, page, 5);
             return OkResponse(missions, "List of your missions");
         }
+
+        [HttpPost]
+        [Authorize(Roles = "Child")]
+        public async Task<IActionResult> AcceptMission([FromBody] AcceptMissionDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequestResponse("Invalid data");
+
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+
+            var result = await _missionService.AcceptMissionAsync(dto.MissionId, email);
+            if (!result.Success)
+                return BadRequestResponse(result.Message);
+
+            return OkResponse(result.Data, result.Message);
+        }
+
+		[HttpPost("missions/{missionId}/submit")]
+		[Authorize(Roles = "Child")]
+public async Task<IActionResult> SubmitMission(
+    int missionId,
+    [FromForm] SubmitWithImageDTO request,
+    IFormFile file)
+{
+    var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+    if (string.IsNullOrEmpty(email))
+        return Unauthorized(new { message = "Không tìm thấy email trong token" });
+
+    if (file == null || file.Length == 0)
+        return BadRequest(new { message = "Trẻ bắt buộc phải gửi ảnh để nộp nhiệm vụ." });
+
+    if (string.IsNullOrWhiteSpace(request.Feedback))
+        return BadRequest(new { message = "Feedback không được rỗng." });
+
+    string imageUrl;
+    using (var stream = file.OpenReadStream())
+    {
+        imageUrl = await _fileStorage.SaveAsync(stream, file.FileName, "missions", _env.WebRootPath);
+    }
+
+    var result = await _missionService.SubmitWithImageAsync(
+        missionId,  
+        email, 
+        imageUrl,
+        request.Feedback
+    );
+
+    return Ok(result);
+}
+
+		[HttpGet("{missionId}")]
+        [Authorize(Roles = "Child")]
+        public async Task<IActionResult> GetMissionById(int missionId)
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+
+            var result = await _missionService.GetMissionByIdAsync(missionId, email);
+            if (!result.Success)
+                return BadRequestResponse(result.Message);
+
+            return OkResponse(result.Data, result.Message);
+        }
     }
 }
