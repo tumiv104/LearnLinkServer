@@ -36,6 +36,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             builder.Services.AddScoped<IMissionService, MissionService>();
             builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
             builder.Services.AddScoped<IParentService, ParentService>();
+
             builder.Services.AddHttpContextAccessor();
 
             //enable jwt token

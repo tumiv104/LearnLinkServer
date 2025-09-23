@@ -23,9 +23,9 @@ namespace Domain.Entities
 
 	public enum RedemptionStatus
 	{
-		Pending,
-		Approved,
-		Rejected,
-		Delivered
+		Pending = 0,
+		Approved = 1,
+		Rejected = 2,
+		Delivered = 3
 	}
 }

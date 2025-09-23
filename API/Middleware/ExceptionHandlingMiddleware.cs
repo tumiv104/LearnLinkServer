@@ -64,6 +64,7 @@ namespace API.Middleware
                 default:
                     statusCode = (int)HttpStatusCode.InternalServerError;
                     response = new ApiResponse<object>(false, "An unexpected error occurred", null, ErrorCodes.INTERNAL_SERVER_ERROR);
+                    //response = new ApiResponse<object>(false, $"An unexpected error occurred {exception.Message}", null, ErrorCodes.INTERNAL_SERVER_ERROR);
                     break;
             }
 

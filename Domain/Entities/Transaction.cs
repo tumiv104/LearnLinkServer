@@ -27,9 +27,9 @@ namespace Domain.Entities
 
 	public enum TransactionType
 	{
-        MissionReward,
-		Redeem,
-		Adjust,
-		Purchase
+        MissionReward = 0,
+		Redeem = 1,
+		Adjust = 2,
+		Purchase = 3
 	}
 }

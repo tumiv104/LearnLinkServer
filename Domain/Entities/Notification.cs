@@ -20,8 +20,8 @@ namespace Domain.Entities
 
 	public enum NotificationType
 	{
-        MissionAssigned,
-        MissionReviewed,
-		RewardRedeem
+        MissionAssigned = 0,
+        MissionReviewed = 1,
+		RewardRedeem = 2
 	}
 }
