@@ -393,8 +393,6 @@ namespace Infrastructure.Services.Missions
 				return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi lấy nhiệm vụ: {ex.Message}");
 			}
 		}
-	}
-=======
         public async Task<MissionDetailDTO?> ParentGetMissionDetailAsync(string parentEmail, int missionId)
         {
             var parent = await _context.Users
@@ -456,6 +454,8 @@ namespace Infrastructure.Services.Missions
                 ChildId = mission.ChildId
             };
         }
+    }
+       
 
     }
-}
+
