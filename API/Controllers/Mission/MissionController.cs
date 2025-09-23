@@ -131,6 +131,25 @@ public async Task<IActionResult> SubmitMission(
 		[HttpGet("{missionId}")]
         [Authorize(Roles = "Child")]
         public async Task<IActionResult> GetMissionById(int missionId)
+        // Parent xem chi tiết nhiệm vụ cụ thể của con mình
+        [HttpGet("parent-mission/{id}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<IActionResult> GetParentMissionDetail(int id)
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+
+            var mission = await _missionService.ParentGetMissionDetailAsync(email, id);
+            if (mission == null)
+                return NotFoundResponse("Mission not found or you do not have permission");
+
+            return OkResponse(mission, "Mission detail");
+        }
+
+        // Child xem chi tiết nhiệm vụ cụ thể của mình
+        [HttpGet("child-mission/{id}")]
+        [Authorize(Roles = "Child")]
+        public async Task<IActionResult> GetChildMissionDetail(int id)
         {
             var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
             if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
@@ -141,5 +160,12 @@ public async Task<IActionResult> SubmitMission(
 
             return OkResponse(result.Data, result.Message);
         }
+            var mission = await _missionService.ChildGetMissionDetailAsync(email, id);
+            if (mission == null)
+                return NotFoundResponse("Mission not found or you do not have permission");
+
+            return OkResponse(mission, "Mission detail");
+        }
+
     }
 }

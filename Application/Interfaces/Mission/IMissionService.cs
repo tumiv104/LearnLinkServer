@@ -12,9 +12,11 @@ namespace Application.Interfaces.Missions
         Task<PageResultDTO<MissionResponseDTO>> ParentGetMissionsAsync(string parentEmail, int page = 1, int pageSize = 5);
         Task<PageResultDTO<MissionResponseDTO>> ChildGetMissionsAsync(string childEmail, int page = 1, int pageSize = 5);
 
-		//Task<ApiResponse<MissionResponse1DTO>> AcceptMissionAsync(int missionId, int childId);
-		Task<ApiResponse<MissionResponse1DTO>> AcceptMissionAsync(int missionId, string childEmail);
-		Task<ApiResponse<MissionResponse1DTO>> SubmitWithImageAsync(int missionId, string childEmail, string imageUrl, string feedback);
-		Task<ApiResponse<MissionResponse1DTO>> GetMissionByIdAsync(int missionId, string childEmail);
-	}
+        //Task<ApiResponse<MissionResponse1DTO>> AcceptMissionAsync(int missionId, int childId);
+        Task<ApiResponse<MissionResponse1DTO>> AcceptMissionAsync(int missionId, string childEmail);
+        Task<ApiResponse<MissionResponse1DTO>> SubmitWithImageAsync(int missionId, string childEmail, string imageUrl, string feedback);
+        Task<ApiResponse<MissionResponse1DTO>> GetMissionByIdAsync(int missionId, string childEmail);
+        Task<MissionDetailDTO?> ParentGetMissionDetailAsync(string parentEmail, int missionId);
+        Task<MissionDetailDTO?> ChildGetMissionDetailAsync(string childEmail, int missionId);
+    }
 }
