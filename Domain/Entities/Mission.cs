@@ -28,7 +28,7 @@ namespace Domain.Entities
         public int Points { get; set; }
 
         public string? Promise { get; set; } // nullable
-        public int? BonusPoints { get; set; } // nullable
+        //public int? BonusPoints { get; set; } // nullable
         public string? Punishment { get; set; } // nullable
 
         public DateTime? Deadline { get; set; }
