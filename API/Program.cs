@@ -1,8 +1,13 @@
 
 using API.Extensions;
 using Application.Interfaces.Auth;
+using Application.Interfaces.Common;
+using Application.Interfaces.Missions;
+using Application.Interfaces.User;
 using Infrastructure.Data;
 using Infrastructure.Services.Auth;
+using Infrastructure.Services.Common;
+using Infrastructure.Services.Missions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -28,6 +33,9 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IAuthResponse, AuthResponse>();
+            builder.Services.AddScoped<IMissionService, MissionService>();
+            builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
+            builder.Services.AddScoped<IParentService, ParentService>();
             builder.Services.AddHttpContextAccessor();
 
             //enable jwt token
