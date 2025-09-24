@@ -33,11 +33,12 @@ namespace API.Controllers.Mission
             if (!ModelState.IsValid)
                 return BadRequestResponse("Invalid data");
 
-            // lấy email parent
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+            var parentIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(parentIdClaim))
+                return UnauthorizedResponse();
 
-            // nếu có file thì upload
+            var parentId = int.Parse(parentIdClaim);
+
             if (attachmentFile != null)
             {
                 using var stream = attachmentFile.OpenReadStream();
@@ -45,22 +46,26 @@ namespace API.Controllers.Mission
                 dto.AttachmentUrl = url;
             }
 
-            var result = await _missionService.AssignMissionAsync(email, dto);
+            var result = await _missionService.AssignMissionAsync(parentId, dto);
             if (!result.Success)
                 return BadRequestResponse(result.Message);
 
             return OkResponse<object>(null, result.Message);
         }
 
+
         // Parent xem danh sách nhiệm vụ của các con mình (có phân trang)
         [HttpGet("parent-missions")]
         [Authorize(Roles = "Parent")]
         public async Task<IActionResult> GetParentMissions(int page = 1)
         {
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+            var parentIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(parentIdClaim))
+                return UnauthorizedResponse();
 
-            var missions = await _missionService.ParentGetMissionsAsync(email, page, 5);
+            var parentId = int.Parse(parentIdClaim);
+
+            var missions = await _missionService.ParentGetMissionsAsync(parentId, page, 5);
             return OkResponse(missions, "List of missions for your children");
         }
 
@@ -69,10 +74,13 @@ namespace API.Controllers.Mission
         [Authorize(Roles = "Child")]
         public async Task<IActionResult> GetChildMissions(int page = 1)
         {
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+            var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(childIdClaim))
+                return UnauthorizedResponse();
 
-            var missions = await _missionService.ChildGetMissionsAsync(email, page, 5);
+            var childId = int.Parse(childIdClaim);
+
+            var missions = await _missionService.ChildGetMissionsAsync(childId, page, 5);
             return OkResponse(missions, "List of your missions");
         }
 
@@ -133,10 +141,12 @@ namespace API.Controllers.Mission
         [Authorize(Roles = "Parent")]
         public async Task<IActionResult> GetParentMissionDetail(int id)
         {
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+            var parentIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
 
-            var mission = await _missionService.ParentGetMissionDetailAsync(email, id);
+            var parentId = int.Parse(parentIdClaim);
+
+            var mission = await _missionService.ParentGetMissionDetailAsync(parentId, id);
             if (mission == null)
                 return NotFoundResponse("Mission not found or you do not have permission");
 
@@ -148,14 +158,17 @@ namespace API.Controllers.Mission
         [Authorize(Roles = "Child")]
         public async Task<IActionResult> GetChildMissionDetail(int id)
         {
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+            var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(childIdClaim)) return UnauthorizedResponse();
 
-            var mission = await _missionService.ChildGetMissionDetailAsync(email, id);
+            var childId = int.Parse(childIdClaim);
+
+            var mission = await _missionService.ChildGetMissionDetailAsync(childId, id);
             if (mission == null)
                 return NotFoundResponse("Mission not found or you do not have permission");
 
             return OkResponse(mission, "Mission detail");
         }
+
     }
 }

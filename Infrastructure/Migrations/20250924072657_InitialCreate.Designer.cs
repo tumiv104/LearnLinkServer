@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(LearnLinkDbContext))]
-    [Migration("20250917151014_InitialCreate")]
+    [Migration("20250924072657_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -36,9 +36,6 @@ namespace Infrastructure.Migrations
                     b.Property<string>("AttachmentUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("BonusPoints")
-                        .HasColumnType("int");
 
                     b.Property<int>("ChildId")
                         .HasColumnType("int");
@@ -194,15 +191,15 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Balance")
                         .HasColumnType("int");
 
-                    b.Property<int>("ChildId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("PointsId");
 
-                    b.HasIndex("ChildId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("Points");
                 });
@@ -539,13 +536,13 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Point", b =>
                 {
-                    b.HasOne("Domain.Entities.User", "Child")
+                    b.HasOne("Domain.Entities.User", "User")
                         .WithMany("Points")
-                        .HasForeignKey("ChildId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Child");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entities.Redemption", b =>
