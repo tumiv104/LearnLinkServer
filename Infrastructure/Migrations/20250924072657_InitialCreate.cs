@@ -64,7 +64,6 @@ namespace Infrastructure.Migrations
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Points = table.Column<int>(type: "int", nullable: false),
                     Promise = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    BonusPoints = table.Column<int>(type: "int", nullable: true),
                     Punishment = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Deadline = table.Column<DateTime>(type: "datetime2", nullable: true),
                     AttachmentUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -169,7 +168,7 @@ namespace Infrastructure.Migrations
                 {
                     PointsId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ChildId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: false),
                     Balance = table.Column<int>(type: "int", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
@@ -177,8 +176,8 @@ namespace Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_Points", x => x.PointsId);
                     table.ForeignKey(
-                        name: "FK_Points_Users_ChildId",
-                        column: x => x.ChildId,
+                        name: "FK_Points_Users_UserId",
+                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "userId",
                         onDelete: ReferentialAction.Cascade);
@@ -369,9 +368,9 @@ namespace Infrastructure.Migrations
                 column: "ParentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Points_ChildId",
+                name: "IX_Points_UserId",
                 table: "Points",
-                column: "ChildId");
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Redemptions_ChildId",

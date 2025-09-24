@@ -24,16 +24,14 @@ namespace Infrastructure.Services.Missions
         }
 
         // Parent giao nhiệm vụ cho con
-        public async Task<AssignMissionResult> AssignMissionAsync(string parentEmail, MissionAssignDTO dto)
+        public async Task<AssignMissionResult> AssignMissionAsync(int parentId, MissionAssignDTO dto)
         {
             var parent = await _context.Users
                 .Include(u => u.ParentRelations)
-                .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == (int)RoleEnum.Parent);
+                .FirstOrDefaultAsync(u => u.userId == parentId && u.RoleId == (int)RoleEnum.Parent);
 
             if (parent == null)
                 return new AssignMissionResult(false, "Parent not found");
-
-            int parentId = parent.userId;
 
             var isChild = parent.ParentRelations.Any(pc => pc.ChildId == dto.ChildId);
             if (!isChild)
@@ -44,6 +42,10 @@ namespace Infrastructure.Services.Missions
 
             if (dto.Points < 0)
                 return new AssignMissionResult(false, "Points cannot be negative");
+
+            var parentPoint = await _context.Points.FirstOrDefaultAsync(p => p.UserId == parentId);
+            if (parentPoint == null || parentPoint.Balance < dto.Points)
+                return new AssignMissionResult(false, "Parent does not have enough points to assign this mission");
 
             var mission = new Domain.Entities.Mission
             {
@@ -70,14 +72,14 @@ namespace Infrastructure.Services.Missions
 
 
 
+
         // Parent xem danh sách nhiệm vụ của các con mình
-        public async Task<PageResultDTO<MissionResponseDTO>> ParentGetMissionsAsync(
-     string parentEmail, int page = 1, int pageSize = 5)
+        public async Task<PageResultDTO<MissionResponseDTO>> ParentGetMissionsAsync(int parentId, int page = 1, int pageSize = 5)
         {
             var parent = await _context.Users
                 .Include(u => u.ParentRelations)
                 .ThenInclude(pc => pc.Child)
-                .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == (int)RoleEnum.Parent);
+                .FirstOrDefaultAsync(u => u.userId == parentId && u.RoleId == (int)RoleEnum.Parent);
 
             int pageNumber = page < 1 ? 1 : page;
             int pageSizeNumber = pageSize < 1 ? 5 : pageSize;
@@ -121,7 +123,6 @@ namespace Infrastructure.Services.Missions
                     Points = m.Points,
                     Deadline = m.Deadline,
                     Status = m.Status.ToString(),
-                    //StatusName = m.Status.ToString(),
                     CreatedAt = m.CreatedAt,
                     ChildId = m.ChildId
                 })
@@ -141,17 +142,14 @@ namespace Infrastructure.Services.Missions
                 TotalPages = totalPages,
                 TotalCount = totalCount
             };
-
         }
 
 
         // Child xem danh sách nhiệm vụ của mình
-        public async Task<PageResultDTO<MissionResponseDTO>> ChildGetMissionsAsync(
-     string childEmail, int page = 1, int pageSize = 5)
+        public async Task<PageResultDTO<MissionResponseDTO>> ChildGetMissionsAsync(int childId, int page = 1, int pageSize = 5)
         {
-            // Lấy thông tin user là Child
             var child = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
+                .FirstOrDefaultAsync(u => u.userId == childId && u.RoleId == (int)RoleEnum.Child);
 
             int pageNumber = page < 1 ? 1 : page;
             int pageSizeNumber = pageSize < 1 ? 5 : pageSize;
@@ -165,8 +163,6 @@ namespace Infrastructure.Services.Missions
                     TotalPages = 0,
                     TotalCount = 0
                 };
-
-            int childId = child.userId;
 
             var query = _context.Missions
                 .Where(m => m.ChildId == childId)
@@ -186,7 +182,6 @@ namespace Infrastructure.Services.Missions
                     Points = m.Points,
                     Deadline = m.Deadline,
                     Status = m.Status.ToString(),
-                    //StatusName = m.Status.ToString(),
                     CreatedAt = m.CreatedAt,
                     ChildId = m.ChildId
                 })
@@ -208,196 +203,196 @@ namespace Infrastructure.Services.Missions
             };
         }
 
-		public async Task<ApiResponse<MissionResponse1DTO>> AcceptMissionAsync(int missionId, string childEmail)
-		{
-			try
-			{
-				using var transaction = await _context.Database.BeginTransactionAsync();
-				try
-				{
-					var child = await _context.Users
-						.FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
-					if (child == null)
-					{
-						await transaction.RollbackAsync();
-						return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
-					}
+        public async Task<ApiResponse<MissionResponse1DTO>> AcceptMissionAsync(int missionId, string childEmail)
+        {
+            try
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var child = await _context.Users
+                        .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
+                    if (child == null)
+                    {
+                        await transaction.RollbackAsync();
+                        return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
+                    }
 
-					var mission = await _context.Missions
-						.Include(m => m.Parent)
-						.Include(m => m.Child)
-						.FirstOrDefaultAsync(m => m.MissionId == missionId && m.ChildId == child.userId);
+                    var mission = await _context.Missions
+                        .Include(m => m.Parent)
+                        .Include(m => m.Child)
+                        .FirstOrDefaultAsync(m => m.MissionId == missionId && m.ChildId == child.userId);
 
-					if (mission == null)
-					{
-						await transaction.RollbackAsync();
-						return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại hoặc không được giao cho trẻ này.");
-					}
+                    if (mission == null)
+                    {
+                        await transaction.RollbackAsync();
+                        return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại hoặc không được giao cho trẻ này.");
+                    }
 
-					if (mission.Status != MissionStatus.Assigned)
-					{
-						await transaction.RollbackAsync();
-						return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không ở trạng thái Assigned để chấp nhận.");
-					}
+                    if (mission.Status != MissionStatus.Assigned)
+                    {
+                        await transaction.RollbackAsync();
+                        return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không ở trạng thái Assigned để chấp nhận.");
+                    }
 
-					mission.Status = MissionStatus.Processing;
-					mission.UpdatedAt = DateTime.UtcNow;
+                    mission.Status = MissionStatus.Processing;
+                    mission.UpdatedAt = DateTime.UtcNow;
 
-					await _context.SaveChangesAsync();
-					await transaction.CommitAsync();
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
 
-					var response = MapToResponseDTO(mission);
-					return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được chấp nhận thành công.", response);
-				}
-				catch
-				{
-					await transaction.RollbackAsync();
-					throw;
-				}
-			}
-			catch (Exception ex)
-			{
-				return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi chấp nhận nhiệm vụ: {ex.Message}");
-			}
-		}
+                    var response = MapToResponseDTO(mission);
+                    return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được chấp nhận thành công.", response);
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi chấp nhận nhiệm vụ: {ex.Message}");
+            }
+        }
 
-		public async Task<ApiResponse<MissionResponse1DTO>> SubmitWithImageAsync(
-	int missionId,
-	string childEmail,
-	string attachmentUrl,
-	string feedback)
-		{
-			if (string.IsNullOrEmpty(attachmentUrl))
-			{
-				return new ApiResponse<MissionResponse1DTO>(false, "Trẻ bắt buộc phải gửi ảnh để hoàn thành nhiệm vụ.");
-			}
+        public async Task<ApiResponse<MissionResponse1DTO>> SubmitWithImageAsync(
+    int missionId,
+    string childEmail,
+    string attachmentUrl,
+    string feedback)
+        {
+            if (string.IsNullOrEmpty(attachmentUrl))
+            {
+                return new ApiResponse<MissionResponse1DTO>(false, "Trẻ bắt buộc phải gửi ảnh để hoàn thành nhiệm vụ.");
+            }
 
-			if (string.IsNullOrWhiteSpace(feedback))
-			{
-				return new ApiResponse<MissionResponse1DTO>(false, "Feedback không được rỗng.");
-			}
+            if (string.IsNullOrWhiteSpace(feedback))
+            {
+                return new ApiResponse<MissionResponse1DTO>(false, "Feedback không được rỗng.");
+            }
 
-			try
-			{
-				using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
 
-				var child = await _context.Users
-					.FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
+                var child = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
 
-				if (child == null)
-				{
-					await transaction.RollbackAsync();
-					return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
-				}
+                if (child == null)
+                {
+                    await transaction.RollbackAsync();
+                    return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
+                }
 
-				var mission = await _context.Missions
-					.Include(m => m.Parent)
-					.Include(m => m.Child)
-					.FirstOrDefaultAsync(m => m.MissionId == missionId);
+                var mission = await _context.Missions
+                    .Include(m => m.Parent)
+                    .Include(m => m.Child)
+                    .FirstOrDefaultAsync(m => m.MissionId == missionId);
 
-				if (mission == null)
-				{
-					await transaction.RollbackAsync();
-					return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại.");
-				}
+                if (mission == null)
+                {
+                    await transaction.RollbackAsync();
+                    return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại.");
+                }
 
-				// kiểm tra xem nhiệm vụ có thuộc về đứa trẻ này không
-				if (mission.ChildId != child.userId)
-				{
-					await transaction.RollbackAsync();
-					return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ này không được giao cho trẻ này.");
-				}
+                // kiểm tra xem nhiệm vụ có thuộc về đứa trẻ này không
+                if (mission.ChildId != child.userId)
+                {
+                    await transaction.RollbackAsync();
+                    return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ này không được giao cho trẻ này.");
+                }
 
-				if (mission.Status != MissionStatus.Processing)
-				{
-					await transaction.RollbackAsync();
-					return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ phải ở trạng thái Processing để nộp.");
-				}
+                if (mission.Status != MissionStatus.Processing)
+                {
+                    await transaction.RollbackAsync();
+                    return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ phải ở trạng thái Processing để nộp.");
+                }
 
-				mission.AttachmentUrl = attachmentUrl;
-				mission.Status = MissionStatus.Submitted;
-				mission.UpdatedAt = DateTime.UtcNow;
+                mission.AttachmentUrl = attachmentUrl;
+                mission.Status = MissionStatus.Submitted;
+                mission.UpdatedAt = DateTime.UtcNow;
 
-				var submission = new Submission
-				{
-					MissionId = missionId,
-					ChildId = child.userId,
-					FileUrl = attachmentUrl,
-					SubmittedAt = DateTime.UtcNow,
-					Status = SubmissionStatus.Pending,
-					Feedback = feedback
-				};
+                var submission = new Submission
+                {
+                    MissionId = missionId,
+                    ChildId = child.userId,
+                    FileUrl = attachmentUrl,
+                    SubmittedAt = DateTime.UtcNow,
+                    Status = SubmissionStatus.Pending,
+                    Feedback = feedback
+                };
 
-				_context.Submissions.Add(submission);
-				await _context.SaveChangesAsync();
-				await transaction.CommitAsync();
+                _context.Submissions.Add(submission);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
-				var response = MapToResponseDTO(mission);
-				return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được nộp thành công với ảnh.", response);
-			}
-			catch (Exception ex)
-			{
-				return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi nộp nhiệm vụ: {ex.Message} | {ex.InnerException?.Message}");
-			}
-		}
+                var response = MapToResponseDTO(mission);
+                return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được nộp thành công với ảnh.", response);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi nộp nhiệm vụ: {ex.Message} | {ex.InnerException?.Message}");
+            }
+        }
 
 
 
-		private static MissionResponse1DTO MapToResponseDTO(Domain.Entities.Mission mission)
-		{
-			if (mission == null) return null;
+        private static MissionResponse1DTO MapToResponseDTO(Domain.Entities.Mission mission)
+        {
+            if (mission == null) return null;
 
-			return new MissionResponse1DTO
-			{
-				MissionId = mission.MissionId,
-				ChildId = mission.ChildId,
-				Title = mission.Title,
-				Description = mission.Description,
-				Points = mission.Points,
-				Deadline = mission.Deadline,
-				Status = mission.Status,
-				CreatedAt = mission.CreatedAt,
-				AttachmentUrl = mission.AttachmentUrl,
-				ImageUrl = mission.AttachmentUrl,
-				
-			};
-		}
+            return new MissionResponse1DTO
+            {
+                MissionId = mission.MissionId,
+                ChildId = mission.ChildId,
+                Title = mission.Title,
+                Description = mission.Description,
+                Points = mission.Points,
+                Deadline = mission.Deadline,
+                Status = mission.Status,
+                CreatedAt = mission.CreatedAt,
+                AttachmentUrl = mission.AttachmentUrl,
+                ImageUrl = mission.AttachmentUrl,
 
-		public async Task<ApiResponse<MissionResponse1DTO>> GetMissionByIdAsync(int missionId, string childEmail)
-		{
-			try
-			{
-				var child = await _context.Users
-					.FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
-				if (child == null)
-				{
-					return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
-				}
+            };
+        }
 
-				var mission = await _context.Missions
-					.Include(m => m.Parent)
-					.Include(m => m.Child)
-					.Include(m => m.Submissions)
-					.FirstOrDefaultAsync(m => m.MissionId == missionId && m.ChildId == child.userId);
+        public async Task<ApiResponse<MissionResponse1DTO>> GetMissionByIdAsync(int missionId, string childEmail)
+        {
+            try
+            {
+                var child = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
+                if (child == null)
+                {
+                    return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
+                }
 
-				if (mission == null)
-				{
-					return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại hoặc không được giao cho trẻ này.");
-				}
+                var mission = await _context.Missions
+                    .Include(m => m.Parent)
+                    .Include(m => m.Child)
+                    .Include(m => m.Submissions)
+                    .FirstOrDefaultAsync(m => m.MissionId == missionId && m.ChildId == child.userId);
 
-				var response = MapToResponseDTO(mission);
-				return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ được lấy thành công.", response);
-			}
-			catch (Exception ex)
-			{
-				return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi lấy nhiệm vụ: {ex.Message}");
-			}
-		}
-        public async Task<MissionDetailDTO?> ParentGetMissionDetailAsync(string parentEmail, int missionId)
+                if (mission == null)
+                {
+                    return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại hoặc không được giao cho trẻ này.");
+                }
+
+                var response = MapToResponseDTO(mission);
+                return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ được lấy thành công.", response);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi lấy nhiệm vụ: {ex.Message}");
+            }
+        }
+        public async Task<MissionDetailDTO?> ParentGetMissionDetailAsync(int parentId, int missionId)
         {
             var parent = await _context.Users
                 .Include(u => u.ParentRelations)
-                .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == (int)RoleEnum.Parent);
+                .FirstOrDefaultAsync(u => u.userId == parentId && u.RoleId == (int)RoleEnum.Parent);
 
             if (parent == null) return null;
 
@@ -426,10 +421,10 @@ namespace Infrastructure.Services.Missions
             };
         }
 
-        public async Task<MissionDetailDTO?> ChildGetMissionDetailAsync(string childEmail, int missionId)
+        public async Task<MissionDetailDTO?> ChildGetMissionDetailAsync(int childId, int missionId)
         {
             var child = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
+                .FirstOrDefaultAsync(u => u.userId == childId && u.RoleId == (int)RoleEnum.Child);
 
             if (child == null) return null;
 
@@ -455,7 +450,7 @@ namespace Infrastructure.Services.Missions
             };
         }
     }
-       
+
 
     }
 
