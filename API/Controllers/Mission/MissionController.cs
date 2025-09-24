@@ -32,8 +32,7 @@ namespace API.Controllers.Mission
         {
             if (!ModelState.IsValid)
                 return BadRequestResponse("Invalid data");
-
-            var parentIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim))
                 return UnauthorizedResponse();
 
@@ -59,7 +58,7 @@ namespace API.Controllers.Mission
         [Authorize(Roles = "Parent")]
         public async Task<IActionResult> GetParentMissions(int page = 1)
         {
-            var parentIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim))
                 return UnauthorizedResponse();
 
@@ -74,7 +73,7 @@ namespace API.Controllers.Mission
         [Authorize(Roles = "Child")]
         public async Task<IActionResult> GetChildMissions(int page = 1)
         {
-            var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var childIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(childIdClaim))
                 return UnauthorizedResponse();
 
@@ -141,7 +140,7 @@ namespace API.Controllers.Mission
         [Authorize(Roles = "Parent")]
         public async Task<IActionResult> GetParentMissionDetail(int id)
         {
-            var parentIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
 
             var parentId = int.Parse(parentIdClaim);
@@ -158,7 +157,7 @@ namespace API.Controllers.Mission
         [Authorize(Roles = "Child")]
         public async Task<IActionResult> GetChildMissionDetail(int id)
         {
-            var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var childIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(childIdClaim)) return UnauthorizedResponse();
 
             var childId = int.Parse(childIdClaim);
