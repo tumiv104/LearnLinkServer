@@ -22,7 +22,7 @@ namespace API.Controllers.Submission
         [Authorize(Roles = "Parent")]
         public async Task<IActionResult> ApproveSubmission(int submissionId)
         {
-            var parentIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
 
             int parentId = int.Parse(parentIdClaim);
@@ -39,7 +39,7 @@ namespace API.Controllers.Submission
         [Authorize(Roles = "Parent")]
         public async Task<IActionResult> RejectSubmission(int submissionId, [FromBody] RejectSubmissionDTO dto)
         {
-            var parentIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
 
             int parentId = int.Parse(parentIdClaim);
