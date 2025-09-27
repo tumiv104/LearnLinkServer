@@ -88,49 +88,92 @@ namespace Infrastructure.Services.Auth
         public async Task<bool> RegisterChildAsync(ChildRegisterDTO childRegisterDTO)
         {
             if (await _context.Users.AnyAsync(u => u.Email == childRegisterDTO.Email)) return false;
-            var child = new Domain.Entities.User
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Name = childRegisterDTO.Name,
-                Email = childRegisterDTO.Email,
-                Password = BCrypt.Net.BCrypt.HashPassword(childRegisterDTO.Password),
-                Dob = childRegisterDTO.Dob,
-                AvatarUrl = childRegisterDTO.AvatarUrl,
-                RoleId = 3,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-            };
-            _context.Users.Add(child);
-            await _context.SaveChangesAsync();
+                var child = new Domain.Entities.User
+                {
+                    Name = childRegisterDTO.Name,
+                    Email = childRegisterDTO.Email,
+                    Password = BCrypt.Net.BCrypt.HashPassword(childRegisterDTO.Password),
+                    Dob = childRegisterDTO.Dob,
+                    AvatarUrl = childRegisterDTO.AvatarUrl,
+                    RoleId = 3,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
 
-            var relation = new ParentChild
+                var relation = new ParentChild
+                {
+                    ParentId = childRegisterDTO.ParentId,
+                    Child = child,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var point = new Point
+                {
+                    User = child,
+                    Balance = 0,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+
+                await _context.Users.AddAsync(child);
+                await _context.ParentChildren.AddAsync(relation);
+                await _context.Points.AddAsync(point);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
             {
-                ParentId = childRegisterDTO.ParentId,
-                ChildId = child.userId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.ParentChildren.Add(relation);
-            await _context.SaveChangesAsync();
-
+                await transaction.RollbackAsync();
+                return false;
+            }
+            
             return true;
         }
 
         public async Task<bool> RegisterUserAsync(UserRegisterDTO userRegisterDTO)
         {
             if (await _context.Users.AnyAsync(u => u.Email == userRegisterDTO.Email)) return false;
-            var user = new Domain.Entities.User
+
+            
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Name = userRegisterDTO.Name,
-                Email = userRegisterDTO.Email,
-                Password = BCrypt.Net.BCrypt.HashPassword(userRegisterDTO.Password),
-                Dob = userRegisterDTO.Dob,
-                AvatarUrl = userRegisterDTO.AvatarUrl,
-                RoleId = userRegisterDTO.RoleId ?? 2,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-            };
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+                var user = new Domain.Entities.User
+                {
+                    Name = userRegisterDTO.Name,
+                    Email = userRegisterDTO.Email,
+                    Password = BCrypt.Net.BCrypt.HashPassword(userRegisterDTO.Password),
+                    Dob = userRegisterDTO.Dob,
+                    AvatarUrl = userRegisterDTO.AvatarUrl,
+                    RoleId = userRegisterDTO.RoleId ?? 2,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+
+                var point = new Point
+                {
+                    User = user,
+                    Balance = 0,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+
+                await _context.Users.AddAsync(user);
+                await _context.Points.AddAsync(point);
+            
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+            
             return true;
         }
 
