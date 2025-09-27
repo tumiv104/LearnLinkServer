@@ -14,12 +14,12 @@ public class ParentService : IParentService
         _context = context;
     }
 
-    public async Task<List<ChildBasicInfoDTO>> GetChildrenAsync(string parentEmail)
+    public async Task<List<ChildBasicInfoDTO>> GetChildrenAsync(int parentId)
     {
         var parent = await _context.Users
             .Include(u => u.ParentRelations)
             .ThenInclude(pc => pc.Child)
-            .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == (int)RoleEnum.Parent);
+            .FirstOrDefaultAsync(u => u.userId == parentId && u.RoleId == (int)RoleEnum.Parent);
 
         if (parent == null) return new List<ChildBasicInfoDTO>();
 

@@ -88,7 +88,7 @@ namespace Infrastructure.Services.Auth
         public async Task<bool> RegisterChildAsync(ChildRegisterDTO childRegisterDTO)
         {
             if (await _context.Users.AnyAsync(u => u.Email == childRegisterDTO.Email)) return false;
-            var child = new User
+            var child = new Domain.Entities.User
             {
                 Name = childRegisterDTO.Name,
                 Email = childRegisterDTO.Email,
@@ -118,7 +118,7 @@ namespace Infrastructure.Services.Auth
         public async Task<bool> RegisterUserAsync(UserRegisterDTO userRegisterDTO)
         {
             if (await _context.Users.AnyAsync(u => u.Email == userRegisterDTO.Email)) return false;
-            var user = new User
+            var user = new Domain.Entities.User
             {
                 Name = userRegisterDTO.Name,
                 Email = userRegisterDTO.Email,
