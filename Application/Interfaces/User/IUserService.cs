@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace Application.Interfaces.User
 {
-    public interface IParentService
+    public interface IUserService
     {
-        Task<List<ChildBasicInfoDTO>> GetChildrenAsync(int parentId);
+        Task<UserProfileDTO> GetUserProfileAsync(int userId);
     }
 }
