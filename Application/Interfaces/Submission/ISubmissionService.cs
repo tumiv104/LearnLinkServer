@@ -1,4 +1,5 @@
 ﻿using Application.DTOs.Common;
+using Application.DTOs.Mission;
 using Application.DTOs.Submission;
 using System;
 using System.Collections.Generic;
@@ -12,5 +13,7 @@ namespace Application.Interfaces.Submission
     {
         Task<ApiResponse<SubmissionResponseDTO>> ApproveSubmissionAsync(int submissionId, int parentId);
         Task<ApiResponse<SubmissionResponseDTO>> RejectSubmissionAsync(int submissionId, int parentId, string? feedback = null);
-    }
+		Task<ApiResponse<MissionResponse1DTO>> AcceptMissionAsync(int missionId, int childId);
+		Task<ApiResponse<MissionResponse1DTO>> SubmitWithImageAsync(int missionId, int childId, string imageUrl, string feedback);
+	}
 }
