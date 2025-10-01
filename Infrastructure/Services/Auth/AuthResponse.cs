@@ -123,6 +123,7 @@ namespace Infrastructure.Services.Auth
                 await _context.Points.AddAsync(point);
 
                 await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch

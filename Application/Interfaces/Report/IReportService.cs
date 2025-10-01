@@ -9,6 +9,6 @@ namespace Application.Interfaces.Report
 {
     public interface IReportService
     {
-        Task<ChildProgressReportDTO> GetChildProgressAsync(int parentId, int childId);
+        Task<ChildProgressReportDTO> GetChildProgressAsync(int parentId, int childId, string period = "all");
     }
 }

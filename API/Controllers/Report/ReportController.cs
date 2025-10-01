@@ -19,15 +19,15 @@ namespace API.Controllers.Report
 
         [HttpGet("child-progress/{childId}")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> GetChildProgress(int childId)
+        public async Task<IActionResult> GetChildProgress(int childId, [FromQuery] string period = "all")
         {
             var parentId = int.Parse(User.FindFirstValue("id"));
-            var report = await _reportService.GetChildProgressAsync(parentId, childId);
+            var report = await _reportService.GetChildProgressAsync(parentId, childId, period);
 
             if (report == null)
                 return NotFoundResponse("Không tìm thấy hoặc không phải con của bạn");
 
-            return OkResponse(report, "Báo cáo tiến độ của con");
+            return OkResponse(report, $"Báo cáo tiến độ của con ({period})");
         }
     }
 }

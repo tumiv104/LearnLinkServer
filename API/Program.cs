@@ -2,6 +2,7 @@
 using API.Extensions;
 using Application.Interfaces.Auth;
 using Application.Interfaces.Common;
+using Application.Interfaces.Dashboard;
 using Application.Interfaces.Missions;
 using Application.Interfaces.Report;
 using Application.Interfaces.Submission;
@@ -9,6 +10,7 @@ using Application.Interfaces.User;
 using Infrastructure.Data;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Common;
+using Infrastructure.Services.Dashboard;
 using Infrastructure.Services.Missions;
 using Infrastructure.Services.Report;
 using Infrastructure.Services.Submissions;
@@ -44,6 +46,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IReportService, ReportService>();
+            builder.Services.AddScoped<IDashboardService, DashboardService>();
             builder.Services.AddHttpContextAccessor();
 
             //enable jwt token
