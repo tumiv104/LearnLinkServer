@@ -137,5 +137,34 @@ namespace API.Controllers.Submission
 				return BadRequestResponse(result.Message);
 			return OkResponse(result.Data, result.Message);
 		}
+
+
+		// Phụ huynh lấy tất cả submission của họ
+		[HttpGet("parents{parentid}")]
+		[Authorize (Roles = "Parent")]
+		public async Task<IActionResult> GetAllSubmissionsForParents(int parentid, [FromQuery] int page = 1, [FromQuery] int pageSize = 5)
+		{
+			var parentIdClaim = User.FindFirstValue("id");
+			if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
+			int parentId = int.Parse(parentIdClaim);
+			var result = await _submissionService.GetAllSubmissionsForParents(parentId, page, pageSize);
+			if (!result.Success)
+				return BadRequestResponse(result.Message);
+			return OkResponse(result.Data, result.Message);
+		}
+
+		// Trẻ lấy tất cả submission của chúng
+		[HttpGet("children{childid}")]
+		[Authorize (Roles = "Child")]
+		public async Task<IActionResult> GetAllSubmissionsForChildren(int childid, [FromQuery] int page = 1, [FromQuery] int pageSize = 5)
+		{
+			var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("id");
+			if (string.IsNullOrEmpty(childIdClaim)) return UnauthorizedResponse();
+			int childId = int.Parse(childIdClaim);
+			var result = await _submissionService.GetAllSubmissionsForChildren(childId, page, pageSize);
+			if (!result.Success)
+				return BadRequestResponse(result.Message);
+			return OkResponse(result.Data, result.Message);
+		}
 	}
 }

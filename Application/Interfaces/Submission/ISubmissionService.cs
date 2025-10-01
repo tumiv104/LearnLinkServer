@@ -17,5 +17,7 @@ namespace Application.Interfaces.Submission
 		Task<ApiResponse<MissionResponse1DTO>> SubmitWithImageAsync(int missionId, int childId, string imageUrl, string feedback);
         Task<ApiResponse<SubmissionDetailDTO>> CheckDetailSubmissionForParents(int submissionId, int parentId);
         Task<ApiResponse<SubmissionDetailDTO>> CheckDetailSubmissionForChildren(int submissionId, int childId);
+        Task<ApiResponse<PageResultDTO<SubmissionDetailDTO>>> GetAllSubmissionsForParents(int parentId, int page, int pageSize);
+        Task<ApiResponse<PageResultDTO<SubmissionDetailDTO>>> GetAllSubmissionsForChildren(int childId, int page, int pageSize);
 	}
 }
