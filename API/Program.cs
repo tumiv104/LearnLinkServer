@@ -3,12 +3,16 @@ using API.Extensions;
 using Application.Interfaces.Auth;
 using Application.Interfaces.Common;
 using Application.Interfaces.Missions;
+using Application.Interfaces.Payment;
+using Application.Interfaces.Points;
 using Application.Interfaces.Submission;
 using Application.Interfaces.User;
 using Infrastructure.Data;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Common;
 using Infrastructure.Services.Missions;
+using Infrastructure.Services.Payment;
+using Infrastructure.Services.Points;
 using Infrastructure.Services.Submissions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -33,12 +37,16 @@ namespace API
             builder.Services.AddDbContext<LearnLinkDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
+            builder.Services.AddHttpClient();
+
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IAuthResponse, AuthResponse>();
             builder.Services.AddScoped<IMissionService, MissionService>();
             builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
             builder.Services.AddScoped<IParentService, ParentService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddScoped<IPointService, PointService>();
 
             builder.Services.AddHttpContextAccessor();
 
