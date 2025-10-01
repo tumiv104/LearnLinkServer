@@ -110,5 +110,32 @@ namespace API.Controllers.Submission
 
 			return Ok(result);
 		}
+
+		// Phụ huynh xem chi tiết submission
+		[HttpGet("{submissionId}/details/parents")]
+		[Authorize(Roles = "Parent")]
+		public async Task<IActionResult> GetSubmissionDetailsForParents(int submissionId)
+		{
+			var parentIdClaim = User.FindFirstValue("id");
+			if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
+			int parentId = int.Parse(parentIdClaim);
+			var result = await _submissionService.CheckDetailSubmissionForParents(submissionId, parentId);
+			if (!result.Success)
+				return BadRequestResponse(result.Message);
+			return OkResponse(result.Data, result.Message);
+		}
+		// Trẻ xem chi tiết submission
+		[HttpGet("{submissionId}/details/children")]
+		[Authorize(Roles = "Child")]
+		public async Task<IActionResult> GetSubmissionDetailsForChildren(int submissionId)
+		{
+			var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("id");
+			if (string.IsNullOrEmpty(childIdClaim)) return UnauthorizedResponse();
+			int childId = int.Parse(childIdClaim);
+			var result = await _submissionService.CheckDetailSubmissionForChildren(submissionId, childId);
+			if (!result.Success)
+				return BadRequestResponse(result.Message);
+			return OkResponse(result.Data, result.Message);
+		}
 	}
 }

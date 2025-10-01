@@ -283,5 +283,75 @@ namespace Infrastructure.Services.Submissions
 
 			};
 		}
+
+		public async Task<ApiResponse<SubmissionDetailDTO>> CheckDetailSubmissionForParents(int submissionId, int parentId)
+		{
+			var submission = await _context.Submissions
+				.Include(s => s.Mission)
+				.ThenInclude(m => m.Child)
+				.FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
+
+			if (submission == null)
+			{
+				return new ApiResponse<SubmissionDetailDTO>(false, "Submission not found.");
+			}
+
+			bool isParentOfChild = await _context.Missions
+									.AnyAsync(m => m.MissionId == submission.MissionId
+									&& m.ParentId == parentId
+									&& m.ChildId == submission.ChildId);
+
+			if (!isParentOfChild)
+				return new ApiResponse<SubmissionDetailDTO>(false, "Access denied");
+
+			var dto = new SubmissionDetailDTO
+			{
+				SubmissionId = submission.SubmissionId,
+				MissionId = submission.MissionId,
+				Title = submission.Mission.Title,
+				Description = submission.Mission.Description,
+				Points = submission.Mission.Points,
+				Deadline = submission.Mission.Deadline,
+				ChildId = submission.ChildId,
+				ChildName = submission.Child.Name,
+				FileUrl = submission.FileUrl,
+				SubmittedAt = submission.SubmittedAt,
+				Status = submission.Status.ToString(),
+				Feedback = submission.Feedback,
+				Score = submission.Score,
+				ReviewedAt = submission.ReviewedAt
+			};
+
+			return new ApiResponse<SubmissionDetailDTO>(true, "Access accepted", dto);
+		}
+
+		public async Task<ApiResponse<SubmissionDetailDTO>> CheckDetailSubmissionForChildren(int submissionId, int childId)
+		{
+			var submission = await _context.Submissions
+				.Include(s => s.Mission)
+				.ThenInclude(m => m.Parent)
+				.FirstOrDefaultAsync(s => s.SubmissionId == submissionId && s.ChildId == childId);
+			if (submission == null)
+			{
+				return new ApiResponse<SubmissionDetailDTO>(false, "Submission not found.");
+			}
+			var dto = new SubmissionDetailDTO
+			{
+				SubmissionId = submission.SubmissionId,
+				MissionId = submission.MissionId,
+				Title = submission.Mission.Title,
+				Description = submission.Mission.Description,
+				Points = submission.Mission.Points,
+				Deadline = submission.Mission.Deadline,
+				ChildId = submission.ChildId,
+				FileUrl = submission.FileUrl,
+				SubmittedAt = submission.SubmittedAt,
+				Status = submission.Status.ToString(),
+				Feedback = submission.Feedback,
+				Score = submission.Score,
+				ReviewedAt = submission.ReviewedAt
+			};
+			return new ApiResponse<SubmissionDetailDTO>(true, "Access accepted", dto);
+		}
 	}
 }
