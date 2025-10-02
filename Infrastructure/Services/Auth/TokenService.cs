@@ -23,7 +23,7 @@ namespace Infrastructure.Services.Auth
             _configuration = configuration;
         }
 
-        public string GenerateAccessToken(User user)
+        public string GenerateAccessToken(Domain.Entities.User user)
         {
             var claims = new[]
             {

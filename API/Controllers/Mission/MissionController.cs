@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.Mission;
 using Application.Interfaces.Common;
 using Application.Interfaces.Missions;
+using Application.Interfaces.Submission;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -12,8 +13,10 @@ namespace API.Controllers.Mission
     public class MissionController : BaseController
     {
         private readonly IMissionService _missionService;
-        private readonly IFileStorage _fileStorage;
+        private readonly ISubmissionService _submissionService;
+		private readonly IFileStorage _fileStorage;
         private readonly IWebHostEnvironment _env;
+
 
         public MissionController(
             IMissionService missionService,
@@ -56,7 +59,7 @@ namespace API.Controllers.Mission
         // Parent xem danh sách nhiệm vụ của các con mình (có phân trang)
         [HttpGet("parent-missions")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> GetParentMissions(int page = 1)
+        public async Task<IActionResult> GetParentMissions(int page = 1, int pageSize = 5)
         {
             var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim))
@@ -64,14 +67,14 @@ namespace API.Controllers.Mission
 
             var parentId = int.Parse(parentIdClaim);
 
-            var missions = await _missionService.ParentGetMissionsAsync(parentId, page, 5);
+            var missions = await _missionService.ParentGetMissionsAsync(parentId, page, pageSize);
             return OkResponse(missions, "List of missions for your children");
         }
 
         // Child xem danh sách nhiệm vụ của mình (có phân trang)
         [HttpGet("child-missions")]
         [Authorize(Roles = "Child")]
-        public async Task<IActionResult> GetChildMissions(int page = 1)
+        public async Task<IActionResult> GetChildMissions(int page = 1, int pageSize = 5)
         {
             var childIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(childIdClaim))
@@ -79,60 +82,8 @@ namespace API.Controllers.Mission
 
             var childId = int.Parse(childIdClaim);
 
-            var missions = await _missionService.ChildGetMissionsAsync(childId, page, 5);
+            var missions = await _missionService.ChildGetMissionsAsync(childId, page, pageSize);
             return OkResponse(missions, "List of your missions");
-        }
-
-        // Child chấp nhận nhiệm vụ
-        [HttpPost("accept")]
-        [Authorize(Roles = "Child")]
-        public async Task<IActionResult> AcceptMission([FromBody] AcceptMissionDTO dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequestResponse("Invalid data");
-
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
-
-            var result = await _missionService.AcceptMissionAsync(dto.MissionId, email);
-            if (!result.Success)
-                return BadRequestResponse(result.Message);
-
-            return OkResponse(result.Data, result.Message);
-        }
-
-        // Child nộp nhiệm vụ kèm ảnh
-        [HttpPost("missions/{missionId}/submit")]
-        [Authorize(Roles = "Child")]
-        public async Task<IActionResult> SubmitMission(
-            int missionId,
-            [FromForm] SubmitWithImageDTO request,
-            IFormFile file)
-        {
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email))
-                return Unauthorized(new { message = "Không tìm thấy email trong token" });
-
-            if (file == null || file.Length == 0)
-                return BadRequest(new { message = "Trẻ bắt buộc phải gửi ảnh để nộp nhiệm vụ." });
-
-            if (string.IsNullOrWhiteSpace(request.Feedback))
-                return BadRequest(new { message = "Feedback không được rỗng." });
-
-            string imageUrl;
-            using (var stream = file.OpenReadStream())
-            {
-                imageUrl = await _fileStorage.SaveAsync(stream, file.FileName, "missions", _env.WebRootPath);
-            }
-
-            var result = await _missionService.SubmitWithImageAsync(
-                missionId,
-                email,
-                imageUrl,
-                request.Feedback
-            );
-
-            return Ok(result);
         }
 
         // Parent xem chi tiết nhiệm vụ cụ thể của con mình
@@ -169,5 +120,19 @@ namespace API.Controllers.Mission
             return OkResponse(mission, "Mission detail");
         }
 
+        // Child get List Mission with Submission by mission status
+        [HttpGet("child/status")]
+        [Authorize(Roles = "Child")]
+        public async Task<IActionResult> GetChildMissionsByStatus(string status)
+        {
+            var childIdClaim = User.FindFirstValue("id");
+            if (string.IsNullOrEmpty(childIdClaim))
+                return UnauthorizedResponse();
+
+            var childId = int.Parse(childIdClaim);
+
+            var missions = await _missionService.GetChildMissionByStatus(childId, status);
+            return OkResponse(missions, "List of your missions");
+        }
     }
 }

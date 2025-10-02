@@ -22,10 +22,14 @@ public class ParentController : BaseController
     [Authorize(Roles = "Parent")]
     public async Task<IActionResult> GetChildren()
     {
-        var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-        if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
+        var parentIdClaim = User.FindFirstValue("id");
+        if (string.IsNullOrEmpty(parentIdClaim))
+            return UnauthorizedResponse();
 
-        var children = await _parentService.GetChildrenAsync(email);
+        var parentId = int.Parse(parentIdClaim);
+
+        var children = await _parentService.GetChildrenAsync(parentId);
         return OkResponse(children, "List of your children");
     }
+
 }
