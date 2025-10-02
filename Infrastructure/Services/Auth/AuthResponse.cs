@@ -92,7 +92,7 @@ namespace Infrastructure.Services.Auth
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var child = new User
+                var child = new Domain.Entities.User
                 {
                     Name = childRegisterDTO.Name,
                     Email = childRegisterDTO.Email,
@@ -123,6 +123,7 @@ namespace Infrastructure.Services.Auth
                 await _context.Points.AddAsync(point);
 
                 await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch
@@ -137,10 +138,13 @@ namespace Infrastructure.Services.Auth
         public async Task<bool> RegisterUserAsync(UserRegisterDTO userRegisterDTO)
         {
             if (await _context.Users.AnyAsync(u => u.Email == userRegisterDTO.Email)) return false;
+
+            
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var user = new User
+                var user = new Domain.Entities.User
                 {
                     Name = userRegisterDTO.Name,
                     Email = userRegisterDTO.Email,
