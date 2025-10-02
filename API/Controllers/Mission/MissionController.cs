@@ -120,5 +120,19 @@ namespace API.Controllers.Mission
             return OkResponse(mission, "Mission detail");
         }
 
+        // Child get List Mission with Submission by mission status
+        [HttpGet("child/status")]
+        [Authorize(Roles = "Child")]
+        public async Task<IActionResult> GetChildMissionsByStatus(string status)
+        {
+            var childIdClaim = User.FindFirstValue("id");
+            if (string.IsNullOrEmpty(childIdClaim))
+                return UnauthorizedResponse();
+
+            var childId = int.Parse(childIdClaim);
+
+            var missions = await _missionService.GetChildMissionByStatus(childId, status);
+            return OkResponse(missions, "List of your missions");
+        }
     }
 }

@@ -11,6 +11,8 @@ using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Application.DTOs.Common;
+using Azure;
+using Application.DTOs.Submission;
 
 namespace Infrastructure.Services.Missions
 {
@@ -265,36 +267,89 @@ namespace Infrastructure.Services.Missions
             };
         }
 
-		//public async Task<ApiResponse<MissionResponse1DTO>> GetMissionByIdAsync(int missionId, string childEmail)
-		//{
-		//    try
-		//    {
-		//        var child = await _context.Users
-		//            .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
-		//        if (child == null)
-		//        {
-		//            return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
-		//        }
+        public async Task<List<MissionWithSubmissionDTO>> GetChildMissionByStatus(int childId, string status)
+        {
+            var child = await _context.Users
+                .FirstOrDefaultAsync(u => u.userId == childId);
 
-		//        var mission = await _context.Missions
-		//            .Include(m => m.Parent)
-		//            .Include(m => m.Child)
-		//            .Include(m => m.Submissions)
-		//            .FirstOrDefaultAsync(m => m.MissionId == missionId && m.ChildId == child.userId);
+            if (child == null)
+                return null;
 
-		//        if (mission == null)
-		//        {
-		//            return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại hoặc không được giao cho trẻ này.");
-		//        }
+            MissionStatus? parsedStatus = null;
+            if (!string.IsNullOrEmpty(status) && Enum.TryParse<MissionStatus>(status, true, out var enumStatus))
+            {
+                parsedStatus = enumStatus;
+            }
 
-		//        var response = MapToResponseDTO(mission);
-		//        return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ được lấy thành công.", response);
-		//    }
-		//    catch (Exception ex)
-		//    {
-		//        return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi lấy nhiệm vụ: {ex.Message}");
-		//    }
-		//}
-	}
+            if (parsedStatus == null && status != "All") return null;
+
+            var query = _context.Missions
+                .Include(m => m.Submissions)
+                .Where(m => m.ChildId == childId && (parsedStatus == null || m.Status == parsedStatus.Value))
+                .OrderByDescending(m => m.CreatedAt);
+
+            var items = await query
+                .Select(m => new MissionWithSubmissionDTO
+                {
+                    MissionId = m.MissionId,
+                    Title = m.Title,
+                    Description = m.Description,
+                    Points = m.Points,
+                    Deadline = m.Deadline,
+                    MissionStatus = m.Status.ToString(),
+                    Promise = m.Promise,
+                    Punishment = m.Punishment,
+                    AttachmentUrl = m.AttachmentUrl,
+                    CreatedAt = m.CreatedAt,
+                    Submission = m.Submissions.OrderByDescending(s => s.SubmittedAt)
+                        .Select(s => new SubmissionResponseDTO
+                        {
+                            SubmissionId = s.SubmissionId,
+                            MissionId = s.MissionId,
+                            ChildId = s.ChildId,
+                            FileUrl = s.FileUrl,
+                            SubmittedAt = s.SubmittedAt,
+                            Status = s.Status.ToString(),
+                            Feedback = s.Feedback,
+                            Score = s.Score,
+                            ReviewedAt = s.ReviewedAt
+                        }).FirstOrDefault()
+                })
+                .ToListAsync();
+
+            return items;
+        }
+
+        //public async Task<ApiResponse<MissionResponse1DTO>> GetMissionByIdAsync(int missionId, string childEmail)
+        //{
+        //    try
+        //    {
+        //        var child = await _context.Users
+        //            .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
+        //        if (child == null)
+        //        {
+        //            return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
+        //        }
+
+        //        var mission = await _context.Missions
+        //            .Include(m => m.Parent)
+        //            .Include(m => m.Child)
+        //            .Include(m => m.Submissions)
+        //            .FirstOrDefaultAsync(m => m.MissionId == missionId && m.ChildId == child.userId);
+
+        //        if (mission == null)
+        //        {
+        //            return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại hoặc không được giao cho trẻ này.");
+        //        }
+
+        //        var response = MapToResponseDTO(mission);
+        //        return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ được lấy thành công.", response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi lấy nhiệm vụ: {ex.Message}");
+        //    }
+        //}
+    }
 }
 
