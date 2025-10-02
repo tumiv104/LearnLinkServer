@@ -1,6 +1,7 @@
 ﻿using Application.DTOs.Mission;
 using Application.Interfaces.Common;
 using Application.Interfaces.Missions;
+using Application.Interfaces.Submission;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -12,8 +13,10 @@ namespace API.Controllers.Mission
     public class MissionController : BaseController
     {
         private readonly IMissionService _missionService;
-        private readonly IFileStorage _fileStorage;
+        private readonly ISubmissionService _submissionService;
+		private readonly IFileStorage _fileStorage;
         private readonly IWebHostEnvironment _env;
+
 
         public MissionController(
             IMissionService missionService,
@@ -81,59 +84,6 @@ namespace API.Controllers.Mission
 
             var missions = await _missionService.ChildGetMissionsAsync(childId, page, pageSize);
             return OkResponse(missions, "List of your missions");
-        }
-
-
-        // Child chấp nhận nhiệm vụ
-        [HttpPost("accept")]
-        [Authorize(Roles = "Child")]
-        public async Task<IActionResult> AcceptMission([FromBody] AcceptMissionDTO dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequestResponse("Invalid data");
-
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email)) return UnauthorizedResponse();
-
-            var result = await _missionService.AcceptMissionAsync(dto.MissionId, email);
-            if (!result.Success)
-                return BadRequestResponse(result.Message);
-
-            return OkResponse(result.Data, result.Message);
-        }
-
-        // Child nộp nhiệm vụ kèm ảnh
-        [HttpPost("missions/{missionId}/submit")]
-        [Authorize(Roles = "Child")]
-        public async Task<IActionResult> SubmitMission(
-            int missionId,
-            [FromForm] SubmitWithImageDTO request,
-            IFormFile file)
-        {
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
-            if (string.IsNullOrEmpty(email))
-                return Unauthorized(new { message = "Không tìm thấy email trong token" });
-
-            if (file == null || file.Length == 0)
-                return BadRequest(new { message = "Trẻ bắt buộc phải gửi ảnh để nộp nhiệm vụ." });
-
-            if (string.IsNullOrWhiteSpace(request.Feedback))
-                return BadRequest(new { message = "Feedback không được rỗng." });
-
-            string imageUrl;
-            using (var stream = file.OpenReadStream())
-            {
-                imageUrl = await _fileStorage.SaveAsync(stream, file.FileName, "missions", _env.WebRootPath);
-            }
-
-            var result = await _missionService.SubmitWithImageAsync(
-                missionId,
-                email,
-                imageUrl,
-                request.Feedback
-            );
-
-            return Ok(result);
         }
 
         // Parent xem chi tiết nhiệm vụ cụ thể của con mình
