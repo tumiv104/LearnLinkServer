@@ -20,7 +20,7 @@ namespace Infrastructure.Services.Report
             _context = context;
         }
 
-        public async Task<ChildProgressReportDTO> GetChildProgressAsync(int parentId, int childId)
+        public async Task<ChildProgressReportDTO> GetChildProgressAsync(int parentId, int childId, string period = "all")
         {
             var child = await _context.Users
                 .Include(u => u.ChildRelations)
@@ -30,10 +30,26 @@ namespace Infrastructure.Services.Report
 
             var isChildOfParent = await _context.ParentChildren
                 .AnyAsync(pc => pc.ChildId == childId && pc.ParentId == parentId);
-
             if (!isChildOfParent) return null;
+            var now = DateTime.UtcNow; 
+            IQueryable<Mission> missionsQuery = _context.Missions.Where(m => m.ChildId == childId);
 
-            var missionsQuery = _context.Missions.Where(m => m.ChildId == childId);
+            switch (period.ToLower())
+            {
+                case "day":
+                case "today":
+                    missionsQuery = missionsQuery.Where(m => m.CreatedAt.Date == now.Date);
+                    break;
+                case "month":
+                    missionsQuery = missionsQuery.Where(m => m.CreatedAt.Year == now.Year && m.CreatedAt.Month == now.Month);
+                    break;
+                case "year":
+                    missionsQuery = missionsQuery.Where(m => m.CreatedAt.Year == now.Year);
+                    break;
+                case "all":
+                default:
+                    break;
+            }
 
             var totalMissions = await missionsQuery.CountAsync();
             var completedMissions = await missionsQuery.CountAsync(m => m.Status == MissionStatus.Completed);
@@ -41,10 +57,9 @@ namespace Infrastructure.Services.Report
             var processingMissions = await missionsQuery.CountAsync(m => m.Status == MissionStatus.Processing);
             var assignedMissions = await missionsQuery.CountAsync(m => m.Status == MissionStatus.Assigned);
 
-            var totalPointsEarned = await _context.Missions
-     .Where(m => m.ChildId == childId && m.Status == MissionStatus.Completed)
-     .SumAsync(m => (int?)m.Points) ?? 0;
-
+            var totalPointsEarned = await missionsQuery
+                .Where(m => m.Status == MissionStatus.Completed)
+                .SumAsync(m => (int?)m.Points) ?? 0;
 
             var lastSubmissionAt = await _context.Submissions
                 .Where(s => s.ChildId == childId)
@@ -65,5 +80,6 @@ namespace Infrastructure.Services.Report
                 LastSubmissionAt = lastSubmissionAt
             };
         }
+
     }
 }

@@ -16,8 +16,11 @@ namespace Application.DTOs.Mission
         public string Status { get; set; }
         public string? Promise { get; set; }
         public string? Punishment { get; set; }
-        public string AttachmentUrl { get; set; }
+        public string? AttachmentUrl { get; set; }
         public DateTime CreatedAt { get; set; }
+
         public int ChildId { get; set; }
+        public string? ChildName { get; set; }
+        public DateTime? LastSubmittedAt { get; set; }
     }
 }

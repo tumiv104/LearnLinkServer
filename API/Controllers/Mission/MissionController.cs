@@ -56,7 +56,7 @@ namespace API.Controllers.Mission
         // Parent xem danh sách nhiệm vụ của các con mình (có phân trang)
         [HttpGet("parent-missions")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> GetParentMissions(int page = 1)
+        public async Task<IActionResult> GetParentMissions(int page = 1, int pageSize = 5)
         {
             var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim))
@@ -64,14 +64,14 @@ namespace API.Controllers.Mission
 
             var parentId = int.Parse(parentIdClaim);
 
-            var missions = await _missionService.ParentGetMissionsAsync(parentId, page, 5);
+            var missions = await _missionService.ParentGetMissionsAsync(parentId, page, pageSize);
             return OkResponse(missions, "List of missions for your children");
         }
 
         // Child xem danh sách nhiệm vụ của mình (có phân trang)
         [HttpGet("child-missions")]
         [Authorize(Roles = "Child")]
-        public async Task<IActionResult> GetChildMissions(int page = 1)
+        public async Task<IActionResult> GetChildMissions(int page = 1, int pageSize = 5)
         {
             var childIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(childIdClaim))
@@ -79,9 +79,10 @@ namespace API.Controllers.Mission
 
             var childId = int.Parse(childIdClaim);
 
-            var missions = await _missionService.ChildGetMissionsAsync(childId, page, 5);
+            var missions = await _missionService.ChildGetMissionsAsync(childId, page, pageSize);
             return OkResponse(missions, "List of your missions");
         }
+
 
         // Child chấp nhận nhiệm vụ
         [HttpPost("accept")]
