@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace Application.DTOs.Submission
 {
-    public class RejectSubmissionDTO
+    public class ReviewSubmissionDTO
     {
         public int SubmissionId { get; set; }
+        public int Score { get; set; }
         public string Feedback { get; set; }
     }
 }
