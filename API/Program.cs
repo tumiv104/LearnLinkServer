@@ -3,14 +3,17 @@ using API.Extensions;
 using Application.Interfaces.Auth;
 using Application.Interfaces.Common;
 using Application.Interfaces.Dashboard;
+using Application.Interfaces.Mission;
 using Application.Interfaces.Missions;
 using Application.Interfaces.Report;
 using Application.Interfaces.Submission;
 using Application.Interfaces.User;
 using Infrastructure.Data;
+using Infrastructure.Hubs;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Common;
 using Infrastructure.Services.Dashboard;
+using Infrastructure.Services.Mission;
 using Infrastructure.Services.Missions;
 using Infrastructure.Services.Report;
 using Infrastructure.Services.Submissions;
@@ -47,6 +50,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IReportService, ReportService>();
             builder.Services.AddScoped<IDashboardService, DashboardService>();
+            builder.Services.AddScoped<IMissionEventService, MissionEventService>();
             builder.Services.AddHttpContextAccessor();
 
             //enable jwt token
@@ -70,6 +74,8 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
                 };
 
             });
+
+            builder.Services.AddSignalR();
 
             builder.Services.AddCors(options =>
             {
@@ -103,6 +109,8 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             app.UseAuthorization();
 
             app.UseStaticFiles();
+
+            app.MapHub<MissionHub>("/hubs/mission");
 
             app.MapControllers();
 
