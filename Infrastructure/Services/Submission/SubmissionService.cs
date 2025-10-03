@@ -17,15 +17,14 @@ namespace Infrastructure.Services.Submissions
 			_context = context;
 		}
 
-		public async Task<ApiResponse<SubmissionResponseDTO>> ApproveSubmissionAsync(int submissionId, int parentId)
-		{
+		public async Task<ApiResponse<SubmissionResponseDTO>> ApproveSubmissionAsync(ReviewSubmissionDTO submissionDto, int parentId) { 
 			using var transaction = await _context.Database.BeginTransactionAsync();
 			try
 			{
 				var submission = await _context.Submissions
 					.Include(s => s.Mission)
 					.ThenInclude(m => m.Child)
-					.FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
+					.FirstOrDefaultAsync(s => s.SubmissionId == submissionDto.SubmissionId);
 
 				if (submission == null)
 					return new ApiResponse<SubmissionResponseDTO>(false, "Submission not found.");
@@ -37,6 +36,8 @@ namespace Infrastructure.Services.Submissions
 					return new ApiResponse<SubmissionResponseDTO>(false, "Submission must be Pending to approve.");
 
 				submission.Status = SubmissionStatus.Approved;
+				submission.Feedback = submissionDto.Feedback;
+				submission.Score = submissionDto.Score;
 				submission.ReviewedAt = DateTime.UtcNow;
 
 				submission.Mission.Status = MissionStatus.Completed;
@@ -80,7 +81,7 @@ namespace Infrastructure.Services.Submissions
 		}
 
 
-		public async Task<ApiResponse<SubmissionResponseDTO>> RejectSubmissionAsync(int submissionId, int parentId, string? feedback = null)
+		public async Task<ApiResponse<SubmissionResponseDTO>> RejectSubmissionAsync(ReviewSubmissionDTO submissionDto, int parentId)
 		{
 			using var transaction = await _context.Database.BeginTransactionAsync();
 			try
@@ -88,7 +89,8 @@ namespace Infrastructure.Services.Submissions
 				var submission = await _context.Submissions
 					.Include(s => s.Mission)
 					.ThenInclude(m => m.Child)
-					.FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
+					.FirstOrDefaultAsync(s => s.SubmissionId == submissionDto.SubmissionId
+					);
 
 				if (submission == null)
 					return new ApiResponse<SubmissionResponseDTO>(false, "Submission not found.");
@@ -100,7 +102,8 @@ namespace Infrastructure.Services.Submissions
 					return new ApiResponse<SubmissionResponseDTO>(false, "Submission must be Pending to reject.");
 
 				submission.Status = SubmissionStatus.Rejected;
-				submission.Feedback = feedback ?? submission.Feedback;
+				submission.Feedback = submissionDto.Feedback;
+				submission.Score = submissionDto.Score;
 				submission.ReviewedAt = DateTime.UtcNow;
 
 				// mission quay lại trạng thái Processing để trẻ có thể nộp lại
@@ -188,16 +191,11 @@ namespace Infrastructure.Services.Submissions
 				return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi chấp nhận nhiệm vụ: {ex.Message}");
 			}
 		}
-		public async Task<ApiResponse<MissionResponse1DTO>> SubmitWithImageAsync(int missionId, int childId, string attachmentUrl, string feedback)
+		public async Task<ApiResponse<MissionResponse1DTO>> SubmitMissionAsync(int missionId, int childId, string fileUrl)
 		{
-			if (string.IsNullOrEmpty(attachmentUrl))
+			if (string.IsNullOrEmpty(fileUrl))
 			{
 				return new ApiResponse<MissionResponse1DTO>(false, "Trẻ bắt buộc phải gửi ảnh để hoàn thành nhiệm vụ.");
-			}
-
-			if (string.IsNullOrWhiteSpace(feedback))
-			{
-				return new ApiResponse<MissionResponse1DTO>(false, "Feedback không được rỗng.");
 			}
 
 			try
@@ -237,7 +235,7 @@ namespace Infrastructure.Services.Submissions
 					return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ phải ở trạng thái Processing để nộp.");
 				}
 
-				mission.AttachmentUrl = attachmentUrl;
+				mission.AttachmentUrl = fileUrl;
 				mission.Status = MissionStatus.Submitted;
 				mission.UpdatedAt = DateTime.UtcNow;
 
@@ -245,10 +243,10 @@ namespace Infrastructure.Services.Submissions
 				{
 					MissionId = missionId,
 					ChildId = child.userId,
-					FileUrl = attachmentUrl,
+					FileUrl = fileUrl,
 					SubmittedAt = DateTime.UtcNow,
 					Status = SubmissionStatus.Pending,
-					Feedback = feedback
+					Feedback = ""
 				};
 
 				_context.Submissions.Add(submission);

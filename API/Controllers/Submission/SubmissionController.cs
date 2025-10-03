@@ -28,14 +28,14 @@ namespace API.Controllers.Submission
         // Phụ huynh duyệt submission
         [HttpPost("{submissionId}/approve")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> ApproveSubmission(int submissionId)
+        public async Task<IActionResult> ApproveSubmission(ReviewSubmissionDTO submissionDto)
         {
             var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
 
             int parentId = int.Parse(parentIdClaim);
 
-            var result = await _submissionService.ApproveSubmissionAsync(submissionId, parentId);
+            var result = await _submissionService.ApproveSubmissionAsync(submissionDto, parentId);
             if (!result.Success)
                 return BadRequestResponse(result.Message);
 
@@ -45,14 +45,14 @@ namespace API.Controllers.Submission
         // Phụ huynh từ chối submission
         [HttpPost("{submissionId}/reject")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> RejectSubmission(int submissionId, [FromBody] RejectSubmissionDTO dto)
+        public async Task<IActionResult> RejectSubmission(int submissionId, [FromBody] ReviewSubmissionDTO dto)
         {
             var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
 
             int parentId = int.Parse(parentIdClaim);
 
-            var result = await _submissionService.RejectSubmissionAsync(submissionId, parentId, dto.Feedback);
+            var result = await _submissionService.RejectSubmissionAsync(dto, parentId);
             if (!result.Success)
                 return BadRequestResponse(result.Message);
 
@@ -82,7 +82,7 @@ namespace API.Controllers.Submission
 		// Child nộp nhiệm vụ kèm ảnh
 		[HttpPost("missions/{missionId}/submit")]
 		[Authorize(Roles = "Child")]
-		public async Task<IActionResult> SubmitMission(int missionId, [FromForm] SubmitWithImageDTO request, IFormFile file)
+		public async Task<IActionResult> SubmitMission(int missionId, IFormFile file)
 		{
 			var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("id");
 			if (string.IsNullOrEmpty(childIdClaim))
@@ -92,21 +92,17 @@ namespace API.Controllers.Submission
 			if (file == null || file.Length == 0)
 				return BadRequest(new { message = "Trẻ bắt buộc phải gửi ảnh để nộp nhiệm vụ." });
 
-			if (string.IsNullOrWhiteSpace(request.Feedback))
-				return BadRequest(new { message = "Feedback không được rỗng." });
-
-			string imageUrl;
+			string fileUrl;
 			using (var stream = file.OpenReadStream())
 			{
-				imageUrl = await _fileStorage.SaveAsync(stream, file.FileName, "missions", _env.WebRootPath);
+                fileUrl = await _fileStorage.SaveAsync(stream, file.FileName, "submissions", _env.WebRootPath);
 			}
 
-			var result = await _submissionService.SubmitWithImageAsync(
+			var result = await _submissionService.SubmitMissionAsync(
 				missionId,
 				childId,
-				imageUrl,
-				request.Feedback
-			);
+                fileUrl
+            );
 
 			return Ok(result);
 		}
