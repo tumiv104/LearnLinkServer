@@ -364,8 +364,9 @@ namespace Infrastructure.Services.Submissions
 						.OrderByDescending(s => s.SubmittedAt);
 
 			int totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSizeNumber);
 
-			var submissions = await query
+            var submissions = await query
 				.Skip((pageNumber - 1) * pageSizeNumber)
 				.Take(pageSizeNumber)
 				.Select(s => new SubmissionDetailDTO
@@ -392,8 +393,9 @@ namespace Infrastructure.Services.Submissions
 					Items = submissions,
 					TotalCount = totalCount,
 					PageNumber = pageNumber,
-					PageSize = pageSizeNumber
-				});
+					PageSize = pageSizeNumber,
+                    TotalPages = totalPages
+                });
 		}
 
 		public async Task<ApiResponse<PageResultDTO<SubmissionDetailDTO>>> GetAllSubmissionsForChildren(int childId, int page = 1, int pageSize = 5)
@@ -406,7 +408,8 @@ namespace Infrastructure.Services.Submissions
 						.Where(s => s.ChildId == childId)
 						.OrderByDescending(s => s.SubmittedAt);
 			int totalCount = await query.CountAsync();
-			var submissions = await query
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSizeNumber);
+            var submissions = await query
 				.Skip((pageNumber - 1) * pageSizeNumber)
 				.Take(pageSizeNumber)
 				.Select(s => new SubmissionDetailDTO
@@ -431,8 +434,9 @@ namespace Infrastructure.Services.Submissions
 					Items = submissions,
 					TotalCount = totalCount,
 					PageNumber = pageNumber,
-					PageSize = pageSizeNumber
-				});
+					PageSize = pageSizeNumber,
+                    TotalPages = totalPages
+                });
 		}
 	}
 }

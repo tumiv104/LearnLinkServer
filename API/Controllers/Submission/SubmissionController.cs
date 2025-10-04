@@ -26,7 +26,7 @@ namespace API.Controllers.Submission
 		}
 
         // Phụ huynh duyệt submission
-        [HttpPost("{submissionId}/approve")]
+        [HttpPost("approve")]
         [Authorize(Roles = "Parent")]
         public async Task<IActionResult> ApproveSubmission(ReviewSubmissionDTO submissionDto)
         {
@@ -43,9 +43,9 @@ namespace API.Controllers.Submission
         }
 
         // Phụ huynh từ chối submission
-        [HttpPost("{submissionId}/reject")]
+        [HttpPost("reject")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> RejectSubmission(int submissionId, [FromBody] ReviewSubmissionDTO dto)
+        public async Task<IActionResult> RejectSubmission(ReviewSubmissionDTO dto)
         {
             var parentIdClaim = User.FindFirstValue("id");
             if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
