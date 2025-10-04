@@ -33,7 +33,7 @@ namespace Infrastructure.Services.Report
                 .AnyAsync(pc => pc.ChildId == childId && pc.ParentId == parentId);
             if (!isChildOfParent) return null;
             var now = DateTime.UtcNow; 
-            IQueryable<Mission> missionsQuery = _context.Missions.Where(m => m.ChildId == childId);
+            IQueryable<Domain.Entities.Mission> missionsQuery = _context.Missions.Where(m => m.ChildId == childId);
 
             switch (period.ToLower())
             {

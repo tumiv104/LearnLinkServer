@@ -13,16 +13,20 @@ using Microsoft.EntityFrameworkCore;
 using Application.DTOs.Common;
 using Azure;
 using Application.DTOs.Submission;
+using Application.Interfaces.Mission;
+using Infrastructure.Services.Mission;
 
 namespace Infrastructure.Services.Missions
 {
     public class MissionService : IMissionService
     {
         private readonly LearnLinkDbContext _context;
+        private readonly IMissionEventService _missionEventService;
 
-        public MissionService(LearnLinkDbContext context)
+        public MissionService(LearnLinkDbContext context, IMissionEventService missionEventService)
         {
             _context = context;
+            _missionEventService = missionEventService;
         }
 
         // Parent giao nhiệm vụ cho con
@@ -67,7 +71,7 @@ namespace Infrastructure.Services.Missions
 
             _context.Missions.Add(mission);
             await _context.SaveChangesAsync();
-
+            await _missionEventService.MissionCreatedAsync(mission);
             return new AssignMissionResult(true, "Mission assigned successfully");
         }
 
