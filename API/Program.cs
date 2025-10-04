@@ -110,7 +110,6 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
             app.UseAuthentication();
             app.UseAuthorization();
-
             app.UseStaticFiles();
 
             app.MapControllers();

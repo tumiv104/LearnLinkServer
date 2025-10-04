@@ -35,4 +35,68 @@ public class ParentService : IParentService
             CreatedAt = c.CreatedAt
         }).ToList();
     }
+
+    public async Task<bool> CreateChildAsync(int parentId, ChildCreateDTO childDTO)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(
+            childDTO.Email ?? "",
+            @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+        ))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(childDTO.Password) || childDTO.Password.Length < 6 || childDTO.Password.Contains(" "))
+            return false;
+
+        if (childDTO.Dob >= DateTime.UtcNow.Date)
+            return false;
+
+        if (await _context.Users.AnyAsync(u => u.Email == childDTO.Email))
+            return false;
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var child = new User
+            {
+                Name = childDTO.Name,
+                Email = childDTO.Email,
+                Password = BCrypt.Net.BCrypt.HashPassword(childDTO.Password),
+                Dob = childDTO.Dob,
+                AvatarUrl = childDTO.AvatarUrl,
+                RoleId = 3,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            var relation = new ParentChild
+            {
+                ParentId = parentId,
+                Child = child,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var point = new Point
+            {
+                User = child,
+                Balance = 0,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _context.Users.AddAsync(child);
+            await _context.ParentChildren.AddAsync(relation);
+            await _context.Points.AddAsync(point);
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            return false;
+        }
+    }
+
+
 }

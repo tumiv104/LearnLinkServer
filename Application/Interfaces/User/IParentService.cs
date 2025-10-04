@@ -10,5 +10,6 @@ namespace Application.Interfaces.User
     public interface IParentService
     {
         Task<List<ChildBasicInfoDTO>> GetChildrenAsync(int parentId);
+        Task<bool> CreateChildAsync(int parentId, ChildCreateDTO childDTO);
     }
 }
