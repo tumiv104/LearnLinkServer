@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Globalization;
 
 namespace Infrastructure.Services.Report
 {
@@ -40,6 +41,15 @@ namespace Infrastructure.Services.Report
                 case "today":
                     missionsQuery = missionsQuery.Where(m => m.CreatedAt.Date == now.Date);
                     break;
+                case "week":
+                    var diff = (int)now.DayOfWeek - (int)DayOfWeek.Monday;
+                    if (diff < 0) diff += 7;
+                    var startOfWeek = now.AddDays(-diff).Date;
+                    var endOfWeek = startOfWeek.AddDays(7).Date;
+
+                    missionsQuery = missionsQuery.Where(m => m.CreatedAt >= startOfWeek && m.CreatedAt < endOfWeek);
+                    break;
+
                 case "month":
                     missionsQuery = missionsQuery.Where(m => m.CreatedAt.Year == now.Year && m.CreatedAt.Month == now.Month);
                     break;

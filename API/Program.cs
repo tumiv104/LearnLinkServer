@@ -6,6 +6,8 @@ using Application.Interfaces.Dashboard;
 using Application.Interfaces.Mission;
 using Application.Interfaces.Missions;
 using Application.Interfaces.Report;
+using Application.Interfaces.Payment;
+using Application.Interfaces.Points;
 using Application.Interfaces.Submission;
 using Application.Interfaces.User;
 using Infrastructure.Data;
@@ -16,6 +18,8 @@ using Infrastructure.Services.Dashboard;
 using Infrastructure.Services.Mission;
 using Infrastructure.Services.Missions;
 using Infrastructure.Services.Report;
+using Infrastructure.Services.Payment;
+using Infrastructure.Services.Points;
 using Infrastructure.Services.Submissions;
 using Infrastructure.Services.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -41,6 +45,8 @@ namespace API
             builder.Services.AddDbContext<LearnLinkDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
+            builder.Services.AddHttpClient();
+
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IAuthResponse, AuthResponse>();
             builder.Services.AddScoped<IMissionService, MissionService>();
@@ -50,6 +56,9 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IReportService, ReportService>();
             builder.Services.AddScoped<IDashboardService, DashboardService>();
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddScoped<IPointService, PointService>();
+
             builder.Services.AddScoped<IMissionEventService, MissionEventService>();
             builder.Services.AddHttpContextAccessor();
 
@@ -107,7 +116,6 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
             app.UseAuthentication();
             app.UseAuthorization();
-
             app.UseStaticFiles();
 
             app.MapHub<MissionHub>("/hubs/mission");

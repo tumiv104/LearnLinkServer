@@ -62,5 +62,25 @@ namespace Infrastructure.Services.User
                 ParentName = parentName
             };
         }
+        public async Task<bool> UpdateUserProfileAsync(int userId, UserProfileUpdateDTO updateDTO)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.userId == userId);
+            if (user == null) return false;
+
+            if (!string.IsNullOrWhiteSpace(updateDTO.Name))
+                user.Name = updateDTO.Name;
+
+            if (updateDTO.Dob.HasValue && updateDTO.Dob.Value < DateTime.UtcNow.Date)
+                user.Dob = updateDTO.Dob;
+
+            if (!string.IsNullOrEmpty(updateDTO.AvatarUrl))
+                user.AvatarUrl = updateDTO.AvatarUrl;
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
     }
 }
