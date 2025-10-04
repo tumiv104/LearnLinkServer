@@ -71,8 +71,79 @@ namespace Infrastructure.Services.Missions
             return new AssignMissionResult(true, "Mission assigned successfully");
         }
 
-        // Parent xem danh sách nhiệm vụ của các con mình
-        public async Task<PageResultDTO<MissionDetailDTO>> ParentGetMissionsAsync(int parentId, int page = 1, int pageSize = 5)
+		public async Task<ApiResponse<MissionEditDTO>> ParentEditMission(int missionId, int parentId, MissionEditDTO dto)
+		{
+			var mission = await _context.Missions
+				.FirstOrDefaultAsync(m => m.MissionId == missionId && m.ParentId == parentId);
+
+			if (mission == null)
+				return new ApiResponse<MissionEditDTO>(false, "Mission not found or does not belong to this Parent");
+
+			if (mission.Status != MissionStatus.Assigned)
+				return new ApiResponse<MissionEditDTO>(false, "Only missions with status 'Assigned' can be edited");
+
+			bool isChanged = false;
+
+			if (!string.IsNullOrEmpty(dto.Title) && dto.Title != mission.Title)
+			{
+				mission.Title = dto.Title;
+				isChanged = true;
+			}
+
+			if (!string.IsNullOrEmpty(dto.Description) && dto.Description != mission.Description)
+			{
+				mission.Description = dto.Description;
+				isChanged = true;
+			}
+
+			if (dto.Points.HasValue && dto.Points.Value != mission.Points)
+			{
+				if (dto.Points.Value < 0)
+					return new ApiResponse<MissionEditDTO>(false, "Points cannot be negative");
+
+				mission.Points = dto.Points.Value;
+				isChanged = true;
+			}
+
+			if (!string.IsNullOrEmpty(dto.Promise) && dto.Promise != mission.Promise)
+			{
+				mission.Promise = dto.Promise;
+				isChanged = true;
+			}
+
+			if (!string.IsNullOrEmpty(dto.Punishment) && dto.Punishment != mission.Punishment)
+			{
+				mission.Punishment = dto.Punishment;
+				isChanged = true;
+			}
+
+			if (dto.Deadline.HasValue && dto.Deadline.Value != mission.Deadline)
+			{
+				if (dto.Deadline.Value < DateTime.UtcNow)
+					return new ApiResponse<MissionEditDTO>(false, "Deadline cannot be in the past");
+
+				mission.Deadline = dto.Deadline.Value;
+				isChanged = true;
+			}
+
+			// Xử lý AttachmentUrl từ DTO (nếu controller truyền vào link mới)
+			if (!string.IsNullOrEmpty(dto.AttachmentUrl) && dto.AttachmentUrl != mission.AttachmentUrl)
+			{
+				mission.AttachmentUrl = dto.AttachmentUrl;
+				isChanged = true;
+			}
+
+			if (!isChanged)
+				return new ApiResponse<MissionEditDTO>(false, "No changes detected, mission not updated");
+
+			mission.UpdatedAt = DateTime.UtcNow;
+			await _context.SaveChangesAsync();
+
+			return new ApiResponse<MissionEditDTO>(true, "Mission updated successfully");
+		}
+
+		// Parent xem danh sách nhiệm vụ của các con mình
+		public async Task<PageResultDTO<MissionDetailDTO>> ParentGetMissionsAsync(int parentId, int page = 1, int pageSize = 5)
         {
             var parent = await _context.Users
                 .Include(u => u.ParentRelations)
@@ -320,36 +391,7 @@ namespace Infrastructure.Services.Missions
             return items;
         }
 
-        //public async Task<ApiResponse<MissionResponse1DTO>> GetMissionByIdAsync(int missionId, string childEmail)
-        //{
-        //    try
-        //    {
-        //        var child = await _context.Users
-        //            .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
-        //        if (child == null)
-        //        {
-        //            return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
-        //        }
-
-        //        var mission = await _context.Missions
-        //            .Include(m => m.Parent)
-        //            .Include(m => m.Child)
-        //            .Include(m => m.Submissions)
-        //            .FirstOrDefaultAsync(m => m.MissionId == missionId && m.ChildId == child.userId);
-
-        //        if (mission == null)
-        //        {
-        //            return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại hoặc không được giao cho trẻ này.");
-        //        }
-
-        //        var response = MapToResponseDTO(mission);
-        //        return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ được lấy thành công.", response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi lấy nhiệm vụ: {ex.Message}");
-        //    }
-        //}
+        
     }
 }
 
