@@ -3,14 +3,17 @@ using Application.Interfaces;
 using Application.Interfaces.User;
 using Domain.Entities;
 using Infrastructure.Data;
+using Infrastructure.Services.User;
 using Microsoft.EntityFrameworkCore;
 
 public class ParentService : IParentService
 {
     private readonly LearnLinkDbContext _context;
+    private readonly IUserService _userService;
 
-    public ParentService(LearnLinkDbContext context)
+    public ParentService(IUserService userService, LearnLinkDbContext context)
     {
+        _userService = userService;
         _context = context;
     }
 
@@ -97,6 +100,15 @@ public class ParentService : IParentService
             return false;
         }
     }
+    public async Task<UserProfileDTO?> GetChildProfileAsync(int parentId, int childId)
+    {
+        var isChildOfParent = await _context.ParentChildren
+            .AnyAsync(pc => pc.ParentId == parentId && pc.ChildId == childId);
 
+        if (!isChildOfParent)
+            return null;
+
+        return await _userService.GetUserProfileAsync(childId);
+    }
 
 }
