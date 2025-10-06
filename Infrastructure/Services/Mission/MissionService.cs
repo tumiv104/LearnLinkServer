@@ -15,6 +15,9 @@ using Azure;
 using Application.DTOs.Submission;
 using Application.Interfaces.Mission;
 using Infrastructure.Services.Mission;
+using Application.DTOs.Notification;
+using Application.Interfaces.Notification;
+using System.Text.Json;
 
 namespace Infrastructure.Services.Missions
 {
@@ -22,11 +25,13 @@ namespace Infrastructure.Services.Missions
     {
         private readonly LearnLinkDbContext _context;
         private readonly IMissionEventService _missionEventService;
+        private readonly INotificationService _notificationService;
 
-        public MissionService(LearnLinkDbContext context, IMissionEventService missionEventService)
+        public MissionService(LearnLinkDbContext context, IMissionEventService missionEventService, INotificationService notificationService)
         {
             _context = context;
             _missionEventService = missionEventService;
+            _notificationService = notificationService;
         }
 
         // Parent giao nhiệm vụ cho con
@@ -72,6 +77,17 @@ namespace Infrastructure.Services.Missions
             _context.Missions.Add(mission);
             await _context.SaveChangesAsync();
             await _missionEventService.MissionCreatedAsync(mission);
+            await _notificationService.AddNotificationAsync(new NotificationRequestDTO
+            {
+                UserId = mission.ChildId,
+                Type = NotificationType.MissionAssigned,
+                Payload = JsonSerializer.Serialize(new
+                {
+                    missionId = mission.MissionId,
+                    title = mission.Title,
+                    assignedBy = parent.Name
+                })
+            });
             return new AssignMissionResult(true, "Mission assigned successfully");
         }
 
@@ -305,6 +321,7 @@ namespace Infrastructure.Services.Missions
                     Punishment = m.Punishment,
                     AttachmentUrl = m.AttachmentUrl,
                     CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt,
                     Submission = m.Submissions.OrderByDescending(s => s.SubmittedAt)
                         .Select(s => new SubmissionResponseDTO
                         {
