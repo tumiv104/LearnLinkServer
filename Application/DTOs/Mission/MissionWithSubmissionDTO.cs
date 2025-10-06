@@ -19,6 +19,7 @@ namespace Application.DTOs.Mission
         public string? Punishment { get; set; }
         public string? AttachmentUrl { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
 
         public SubmissionResponseDTO? Submission { get; set; }
     }

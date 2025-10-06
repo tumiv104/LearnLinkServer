@@ -26,6 +26,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Application.Interfaces.Shop;
+using Application.Interfaces.Product;
+using Infrastructure.Services.Shop;
+using Infrastructure.Services.Product;
+using Application.Interfaces.Notification;
+using Infrastructure.Services.Notification;
 
 namespace API
 {
@@ -58,6 +64,9 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             builder.Services.AddScoped<IDashboardService, DashboardService>();
             builder.Services.AddScoped<IPaymentService, PaymentService>();
             builder.Services.AddScoped<IPointService, PointService>();
+            builder.Services.AddScoped<IShopService, ShopService>();
+            builder.Services.AddScoped<IProductService, ProductService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
 
             builder.Services.AddScoped<IMissionEventService, MissionEventService>();
             builder.Services.AddHttpContextAccessor();

@@ -1,21 +1,30 @@
 ﻿using Application.DTOs.Common;
 using Application.DTOs.Mission;
+using Application.DTOs.Notification;
 using Application.DTOs.Submission;
+using Application.Interfaces.Mission;
+using Application.Interfaces.Notification;
 using Application.Interfaces.Submission;
 using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
+using System.Text.Json;
 
 namespace Infrastructure.Services.Submissions
 {
 	public class SubmissionService : ISubmissionService
 	{
 		private readonly LearnLinkDbContext _context;
+        private readonly IMissionEventService _missionEventService;
+		private readonly INotificationService _notificationService;
 
-		public SubmissionService(LearnLinkDbContext context)
+        public SubmissionService(LearnLinkDbContext context, IMissionEventService missionEventService, INotificationService notificationService)
 		{
 			_context = context;
-		}
+            _missionEventService = missionEventService;
+			_notificationService = notificationService;
+        }
 
 		public async Task<ApiResponse<SubmissionResponseDTO>> ApproveSubmissionAsync(ReviewSubmissionDTO submissionDto, int parentId) { 
 			using var transaction = await _context.Database.BeginTransactionAsync();
@@ -69,8 +78,21 @@ namespace Infrastructure.Services.Submissions
 
 				await _context.SaveChangesAsync();
 				await transaction.CommitAsync();
-
-				return new ApiResponse<SubmissionResponseDTO>(true, "Submission approved successfully.",
+				await _missionEventService.MissionReviewedAsync(submission, "Approved");
+                await _notificationService.AddNotificationAsync(new NotificationRequestDTO
+                {
+                    UserId = submission.ChildId,
+                    Type = NotificationType.MissionReviewed,
+                    Payload = JsonSerializer.Serialize(new
+                    {
+                        missionId = submission.MissionId,
+                        title = submission.Mission.Title,
+                        points = submission.Mission.Points,
+						score = submission?.Score ?? null,
+						feedback = submission?.Feedback ?? null,
+                    })
+                });
+                return new ApiResponse<SubmissionResponseDTO>(true, "Submission approved successfully.",
 					MapToDTO(submission));
 			}
 			catch (Exception ex)
@@ -112,8 +134,21 @@ namespace Infrastructure.Services.Submissions
 
 				await _context.SaveChangesAsync();
 				await transaction.CommitAsync();
-
-				return new ApiResponse<SubmissionResponseDTO>(true, "Submission rejected successfully.",
+                await _missionEventService.MissionReviewedAsync(submission, "Rejected");
+                await _notificationService.AddNotificationAsync(new NotificationRequestDTO
+                {
+                    UserId = submission.ChildId,
+                    Type = NotificationType.MissionReviewed,
+                    Payload = JsonSerializer.Serialize(new
+                    {
+                        missionId = submission.MissionId,
+                        title = submission.Mission.Title,
+                        points = submission.Mission.Points,
+                        score = submission?.Score ?? null,
+                        feedback = submission?.Feedback ?? null,
+                    })
+                });
+                return new ApiResponse<SubmissionResponseDTO>(true, "Submission rejected successfully.",
 					MapToDTO(submission));
 			}
 			catch (Exception ex)
@@ -174,11 +209,23 @@ namespace Infrastructure.Services.Submissions
 					mission.Status = MissionStatus.Processing;
 					mission.UpdatedAt = DateTime.UtcNow;
 
-					await _context.SaveChangesAsync();
+					await _context.SaveChangesAsync(); 
 					await transaction.CommitAsync();
-
+					await _missionEventService.MissionStartedAsync(mission, mission.ParentId, child.Name);
 					var response = MapToResponseDTO(mission);
-					return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được chấp nhận thành công.", response);
+                    await _notificationService.AddNotificationAsync(new NotificationRequestDTO
+                    {
+                        UserId = mission.ParentId,
+                        Type = NotificationType.MissionStarted,
+                        Payload = JsonSerializer.Serialize(new
+                        {
+                            missionId = mission.MissionId,
+                            title = mission.Title,
+                            points = mission.Points,
+                            childName = child.Name,
+                        })
+                    });
+                    return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được chấp nhận thành công.", response);
 				}
 				catch
 				{
@@ -235,7 +282,7 @@ namespace Infrastructure.Services.Submissions
 					return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ phải ở trạng thái Processing để nộp.");
 				}
 
-				mission.AttachmentUrl = fileUrl;
+				//mission.AttachmentUrl = fileUrl;
 				mission.Status = MissionStatus.Submitted;
 				mission.UpdatedAt = DateTime.UtcNow;
 
@@ -252,9 +299,21 @@ namespace Infrastructure.Services.Submissions
 				_context.Submissions.Add(submission);
 				await _context.SaveChangesAsync();
 				await transaction.CommitAsync();
-
+				await _missionEventService.MissionSubmittedAsync(mission, mission.ParentId, mission.Child.Name);
 				var response = MapToResponseDTO(mission);
-				return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được nộp thành công với ảnh.", response);
+                await _notificationService.AddNotificationAsync(new NotificationRequestDTO
+                {
+                    UserId = mission.ParentId,
+                    Type = NotificationType.MissionSubmitted,
+                    Payload = JsonSerializer.Serialize(new
+                    {
+                        missionId = mission.MissionId,
+                        title = mission.Title,
+                        points = mission.Points,
+                        childName = child.Name,
+                    })
+                });
+                return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được nộp thành công với ảnh.", response);
 			}
 			catch (Exception ex)
 			{
