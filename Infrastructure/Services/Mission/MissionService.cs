@@ -391,7 +391,92 @@ namespace Infrastructure.Services.Missions
             return items;
         }
 
-        
-    }
+		public async Task<ApiResponse<MissionByTimeRangeDTO>> ChildGetMissionsByAllRangesAsync(int childId)
+		{
+			var child = await _context.Users
+				.FirstOrDefaultAsync(u => u.userId == childId && u.RoleId == (int)RoleEnum.Child);
+
+			if (child == null)
+				return new ApiResponse<MissionByTimeRangeDTO>(false, "Child not found");
+
+			DateTime now = DateTime.UtcNow;
+
+			// Ngày
+			var todayStart = now.Date;
+			var todayEnd = todayStart.AddDays(1);
+
+			// Tuần (tính từ thứ 2 -> CN)
+			int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+			var weekStart = now.AddDays(-diff).Date;
+			var weekEnd = weekStart.AddDays(7);
+
+			// Tháng
+			var monthStart = new DateTime(now.Year, now.Month, 1);
+			var monthEnd = monthStart.AddMonths(1);
+
+			// Query base
+			var baseQuery = _context.Missions
+				.Where(m => m.ChildId == childId);
+
+			var todayMissions = await baseQuery
+				.Where(m => m.CreatedAt >= todayStart && m.CreatedAt < todayEnd)
+				.OrderByDescending(m => m.CreatedAt)
+				.Select(m => new MissionResponseDTO
+				{
+					MissionId = m.MissionId,
+					Title = m.Title,
+					Description = m.Description,
+					Points = m.Points,
+					Deadline = m.Deadline,
+					Status = m.Status.ToString(),
+					CreatedAt = m.CreatedAt,
+					ChildId = m.ChildId
+				})
+				.ToListAsync();
+
+			var weekMissions = await baseQuery
+				.Where(m => m.CreatedAt >= weekStart && m.CreatedAt < weekEnd)
+				.OrderByDescending(m => m.CreatedAt)
+				.Select(m => new MissionResponseDTO
+				{
+					MissionId = m.MissionId,
+					Title = m.Title,
+					Description = m.Description,
+					Points = m.Points,
+					Deadline = m.Deadline,
+					Status = m.Status.ToString(),
+					CreatedAt = m.CreatedAt,
+					ChildId = m.ChildId
+				})
+				.ToListAsync();
+
+			var monthMissions = await baseQuery
+				.Where(m => m.CreatedAt >= monthStart && m.CreatedAt < monthEnd)
+				.OrderByDescending(m => m.CreatedAt)
+				.Select(m => new MissionResponseDTO
+				{
+					MissionId = m.MissionId,
+					Title = m.Title,
+					Description = m.Description,
+					Points = m.Points,
+					Deadline = m.Deadline,
+					Status = m.Status.ToString(),
+					CreatedAt = m.CreatedAt,
+					ChildId = m.ChildId
+				})
+				.ToListAsync();
+
+			var result = new MissionByTimeRangeDTO
+			{
+				TodayMissions = todayMissions,
+				WeekMissions = weekMissions,
+				MonthMissions = monthMissions
+			};
+
+			return new ApiResponse<MissionByTimeRangeDTO>(true, "Missions retrieved successfully", result);
+		}
+
+
+	}
 }
 

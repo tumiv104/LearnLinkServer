@@ -15,5 +15,6 @@ namespace Application.Interfaces.Missions
         Task<MissionDetailDTO?> ChildGetMissionDetailAsync(int childId, int missionId);
         Task<List<MissionWithSubmissionDTO>> GetChildMissionByStatus(int childId,  string status);
         Task<ApiResponse<MissionEditDTO>> ParentEditMission(int missionId, int parentId, MissionEditDTO dto);
+        Task<ApiResponse<MissionByTimeRangeDTO>> ChildGetMissionsByAllRangesAsync(int childId);
 	}
 }

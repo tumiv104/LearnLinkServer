@@ -161,5 +161,25 @@ namespace API.Controllers.Mission
             var missions = await _missionService.GetChildMissionByStatus(childId, status);
             return OkResponse(missions, "List of your missions");
         }
-    }
+
+		[HttpGet("getMissionTimeRange")]
+		[Authorize(Roles = "Child")]
+		public async Task<IActionResult> GetMissionsByAllRanges()
+		{
+			var childIdClaim = User.FindFirstValue("id");
+			if (string.IsNullOrEmpty(childIdClaim))
+				return UnauthorizedResponse();
+
+			var childId = int.Parse(childIdClaim);
+
+			var result = await _missionService.ChildGetMissionsByAllRangesAsync(childId);
+
+			if (!result.Success)
+				return BadRequestResponse(result.Message);
+
+			return OkResponse(result.Data, result.Message);
+		}
+
+
+	}
 }
