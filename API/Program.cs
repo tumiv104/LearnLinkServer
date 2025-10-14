@@ -112,7 +112,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
                 {
                     policy
                     // Only allow these origins
-                    .WithOrigins("http://localhost:3000", "https://learnlink.vercel.app")
+                    .WithOrigins("http://localhost:3000", "https://learnlinkk.vercel.app")
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
