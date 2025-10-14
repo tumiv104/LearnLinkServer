@@ -27,10 +27,14 @@ RUN dotnet publish "API.csproj" -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
+# Copy from build stage
 COPY --from=build /app/publish .
 
-# Render requires port 8080
-ENV ASPNETCORE_URLS=http://+:8080
+# Expose port 8080 (Render expects this)
 EXPOSE 8080
 
+# Set environment
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+# Run the application
 ENTRYPOINT ["dotnet", "API.dll"]

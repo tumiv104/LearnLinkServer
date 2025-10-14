@@ -41,6 +41,17 @@ namespace API
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            var port = Environment.GetEnvironmentVariable("PORT") ?? "8888";
+
+            if (builder.Environment.IsProduction())
+            {
+                builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+            }
+            else
+            {
+                builder.WebHost.UseUrls($"https://localhost:{port}");
+            }
+
             // Add services to the container.
 
             builder.Services.AddControllers();
@@ -101,7 +112,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
                 {
                     policy
                     // Only allow these origins
-                    .WithOrigins("http://localhost:3000")
+                    .WithOrigins("http://localhost:3000", "https://learnlink.vercel.app")
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
@@ -115,11 +126,10 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
+                app.UseHttpsRedirection();
             }
 
             app.UseGlobalExceptionHandling();
-
-            app.UseHttpsRedirection();
 
             app.UseCors("AllowSpecificOrigin");
 
