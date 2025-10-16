@@ -53,6 +53,7 @@ namespace API.Middleware
                 case DbUpdateException:
                     statusCode = (int)HttpStatusCode.Conflict;
                     response = new ApiResponse<object>(false, "Database update error", null, ErrorCodes.DB_ERROR);
+                    response = new ApiResponse<object>(false, $"Database update error {exception.Message}", null, ErrorCodes.DB_ERROR);
                     break;
 
                 case InvalidOperationException:
@@ -63,8 +64,8 @@ namespace API.Middleware
 
                 default:
                     statusCode = (int)HttpStatusCode.InternalServerError;
-                    response = new ApiResponse<object>(false, "An unexpected error occurred", null, ErrorCodes.INTERNAL_SERVER_ERROR);
-                    //response = new ApiResponse<object>(false, $"An unexpected error occurred {exception.Message}", null, ErrorCodes.INTERNAL_SERVER_ERROR);
+                    //response = new ApiResponse<object>(false, "An unexpected error occurred", null, ErrorCodes.INTERNAL_SERVER_ERROR);
+                    response = new ApiResponse<object>(false, $"An unexpected error occurred {exception.Message}", null, ErrorCodes.INTERNAL_SERVER_ERROR);
                     break;
             }
 
