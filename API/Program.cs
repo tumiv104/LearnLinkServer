@@ -26,6 +26,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Application.Interfaces.Shop;
+using Application.Interfaces.Product;
+using Infrastructure.Services.Shop;
+using Infrastructure.Services.Product;
+using Application.Interfaces.Notification;
+using Infrastructure.Services.Notification;
 
 namespace API
 {
@@ -34,6 +40,17 @@ namespace API
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            var port = Environment.GetEnvironmentVariable("PORT") ?? "8888";
+
+            if (builder.Environment.IsProduction())
+            {
+                builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+            }
+            else
+            {
+                builder.WebHost.UseUrls($"https://localhost:{port}");
+            }
 
             // Add services to the container.
 
@@ -58,6 +75,9 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             builder.Services.AddScoped<IDashboardService, DashboardService>();
             builder.Services.AddScoped<IPaymentService, PaymentService>();
             builder.Services.AddScoped<IPointService, PointService>();
+            builder.Services.AddScoped<IShopService, ShopService>();
+            builder.Services.AddScoped<IProductService, ProductService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
 
             builder.Services.AddScoped<IMissionEventService, MissionEventService>();
             builder.Services.AddHttpContextAccessor();
@@ -92,7 +112,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
                 {
                     policy
                     // Only allow these origins
-                    .WithOrigins("http://localhost:3000")
+                    .WithOrigins("http://localhost:3000", "https://learnlinkk.vercel.app")
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
@@ -106,11 +126,10 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
+                app.UseHttpsRedirection();
             }
 
             app.UseGlobalExceptionHandling();
-
-            app.UseHttpsRedirection();
 
             app.UseCors("AllowSpecificOrigin");
 

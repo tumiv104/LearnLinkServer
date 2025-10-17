@@ -11,5 +11,6 @@ namespace Application.Interfaces.User
     {
         Task<List<ChildBasicInfoDTO>> GetChildrenAsync(int parentId);
         Task<bool> CreateChildAsync(int parentId, ChildCreateDTO childDTO);
+        Task<UserProfileDTO?> GetChildProfileAsync(int parentId, int childId);
     }
 }

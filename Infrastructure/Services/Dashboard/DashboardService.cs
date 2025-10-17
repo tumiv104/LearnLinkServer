@@ -50,24 +50,24 @@ namespace Infrastructure.Services.Dashboard
                         : 0
                 }).ToListAsync();
 
-            var notifications = await _context.Notifications
-                .Where(n => n.UserId == parentId)
-                .OrderByDescending(n => n.CreatedAt)
-                .Take(10)
-                .Select(n => new NotificationDTO
-                {
-                    NotificationId = n.NotificationId,
-                    Message = n.Message,
-                    CreatedAt = n.CreatedAt,
-                    Type = n.Type.ToString(),
-                    IsRead = n.IsRead
-                }).ToListAsync();
+            //var notifications = await _context.Notifications
+            //    .Where(n => n.UserId == parentId)
+            //    .OrderByDescending(n => n.CreatedAt)
+            //    .Take(10)
+            //    .Select(n => new NotificationDTO
+            //    {
+            //        NotificationId = n.NotificationId,
+            //        Message = n.Message,
+            //        CreatedAt = n.CreatedAt,
+            //        Type = n.Type.ToString(),
+            //        IsRead = n.IsRead
+            //    }).ToListAsync();
 
             return new ParentOverviewDTO
             {
                 Overview = stats,
                 Children = children ?? new List<ChildSummaryDTO>(),
-                RecentNotifications = notifications ?? new List<NotificationDTO>()
+                RecentNotifications = new List<NotificationDTO>()
             };
         }
 

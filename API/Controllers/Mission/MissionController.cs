@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Mission;
+﻿using Application.DTOs.Common;
+using Application.DTOs.Mission;
 using Application.Interfaces.Common;
 using Application.Interfaces.Missions;
 using Application.Interfaces.Submission;
@@ -55,9 +56,35 @@ namespace API.Controllers.Mission
             return OkResponse<object>(null, result.Message);
         }
 
+		[HttpPut("edit/{missionId}")]
+		[Authorize(Roles = "Parent")]
+		public async Task<IActionResult> EditMission(int missionId, [FromForm] MissionEditDTO dto, IFormFile? attachmentFile)
+		{
+			var parentIdClaim = User.FindFirstValue("id");
+			if (string.IsNullOrEmpty(parentIdClaim))
+				return UnauthorizedResponse();
 
-        // Parent xem danh sách nhiệm vụ của các con mình (có phân trang)
-        [HttpGet("parent-missions")]
+			var parentId = int.Parse(parentIdClaim);
+
+			// Nếu có file upload thì ghi đè URL trong DTO
+			if (attachmentFile != null)
+			{
+				using var stream = attachmentFile.OpenReadStream();
+				var url = await _fileStorage.SaveAsync(stream, attachmentFile.FileName, "missions", _env.WebRootPath);
+				dto.AttachmentUrl = url;
+			}
+
+			var result = await _missionService.ParentEditMission(missionId, parentId, dto);
+
+			if (!result.Success)
+				return BadRequestResponse(result.Message);
+
+			return OkResponse<object>(null, result.Message);
+		}
+
+
+		// Parent xem danh sách nhiệm vụ của các con mình (có phân trang)
+		[HttpGet("parent-missions")]
         [Authorize(Roles = "Parent")]
         public async Task<IActionResult> GetParentMissions(int page = 1, int pageSize = 5)
         {
@@ -134,5 +161,25 @@ namespace API.Controllers.Mission
             var missions = await _missionService.GetChildMissionByStatus(childId, status);
             return OkResponse(missions, "List of your missions");
         }
-    }
+
+		[HttpGet("getMissionTimeRange")]
+		[Authorize(Roles = "Child")]
+		public async Task<IActionResult> GetMissionsByAllRanges()
+		{
+			var childIdClaim = User.FindFirstValue("id");
+			if (string.IsNullOrEmpty(childIdClaim))
+				return UnauthorizedResponse();
+
+			var childId = int.Parse(childIdClaim);
+
+			var result = await _missionService.ChildGetMissionsByAllRangesAsync(childId);
+
+			if (!result.Success)
+				return BadRequestResponse(result.Message);
+
+			return OkResponse(result.Data, result.Message);
+		}
+
+
+	}
 }

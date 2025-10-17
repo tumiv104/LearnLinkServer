@@ -15,6 +15,8 @@ namespace Infrastructure.Data
 		public DbSet<Point> Points { get; set; }
 		public DbSet<Transaction> Transactions { get; set; }
 		public DbSet<Reward> Rewards { get; set; }
+		public DbSet<Shop> Shops { get; set; }
+		public DbSet<Product> Products { get; set; }
 		public DbSet<Redemption> Redemptions { get; set; }
 		public DbSet<Notification> Notifications { get; set; }
 		public DbSet<Payment> Payments { get; set; }
@@ -65,9 +67,15 @@ namespace Infrastructure.Data
 				.HasForeignKey(r => r.ChildId)
 				.OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Redemption>()
+				.HasOne(r => r.Product)
+				.WithMany(p => p.Redemptions)
+				.HasForeignKey(r => r.ProductId)
+				.OnDelete(DeleteBehavior.Restrict);
 
-			// Enum mapping => lưu string thay vì int
-			modelBuilder.Entity<Mission>()
+
+            // Enum mapping => lưu string thay vì int
+            modelBuilder.Entity<Mission>()
 				.Property(t => t.Status)
 				.HasConversion<string>()
 				.HasMaxLength(20);

@@ -10,8 +10,8 @@ namespace Application.Interfaces.Mission
     public interface IMissionEventService
     {
         Task MissionCreatedAsync(Domain.Entities.Mission mission);
-        Task MissionStartedAsync(int missionId, int childId);
-        Task MissionSubmittedAsync(int missionId, int parentId);
-        Task MissionReviewedAsync(int missionId, int childId, string status);
+        Task MissionStartedAsync(Domain.Entities.Mission mission, int parentId, string childName);
+        Task MissionSubmittedAsync(Domain.Entities.Mission mission, int parentId, string childName);
+        Task MissionReviewedAsync(Domain.Entities.Submission submission, string status);
     }
 }

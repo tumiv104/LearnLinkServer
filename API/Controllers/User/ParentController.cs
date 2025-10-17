@@ -57,5 +57,24 @@ public class ParentController : BaseController
         return OkResponse<object>(null, "Child created successfully");
     }
 
+    [HttpGet("children/{childId}")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> GetChildProfile(int childId)
+    {
+        var parentIdClaim = User.FindFirstValue("id");
+        if (string.IsNullOrEmpty(parentIdClaim))
+            return UnauthorizedResponse();
+
+        var parentId = int.Parse(parentIdClaim);
+
+        var profile = await _parentService.GetChildProfileAsync(parentId, childId);
+        if (profile == null)
+            return NotFoundResponse("Child not found or does not belong to this parent");
+
+        return OkResponse(profile, "Child profile retrieved successfully");
+    }
+
+
+
 
 }

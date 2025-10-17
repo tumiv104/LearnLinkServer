@@ -25,22 +25,48 @@ namespace Infrastructure.Services.Mission
             });
         }
 
-        public async Task MissionReviewedAsync(int missionId, int childId, string status)
+        public async Task MissionReviewedAsync(Domain.Entities.Submission submission, string status)
         {
-            await _hubContext.Clients.Group($"user-{childId}")
-            .SendAsync("MissionReviewed", new { missionId, status });
+            await _hubContext.Clients.Group($"user-{submission.ChildId}")
+            .SendAsync("MissionReviewed", new
+            {
+                submission.MissionId,
+                submission.Mission.Title,
+                submission.Mission.Points,
+                submission.Mission.Deadline,
+                submission.ChildId,
+                submission?.Score,
+                submission?.Feedback,
+                status
+            });
         }
 
-        public async Task MissionStartedAsync(int missionId, int childId)
-        {
-            await _hubContext.Clients.Group($"user-{childId}")
-            .SendAsync("MissionStarted", new { missionId });
-        }
-
-        public async Task MissionSubmittedAsync(int missionId, int parentId)
+        public async Task MissionStartedAsync(Domain.Entities.Mission mission, int parentId, string childName)
         {
             await _hubContext.Clients.Group($"user-{parentId}")
-            .SendAsync("MissionSubmitted", new { missionId });
+            .SendAsync("MissionStarted", new
+            {
+                mission.MissionId,
+                mission.Title,
+                mission.Points,
+                mission.Deadline,
+                parentId,
+                childName
+            });
+        }
+
+        public async Task MissionSubmittedAsync(Domain.Entities.Mission mission, int parentId, string childName)
+        {
+            await _hubContext.Clients.Group($"user-{parentId}")
+            .SendAsync("MissionSubmitted", new
+            {
+                mission.MissionId,
+                mission.Title,
+                mission.Points,
+                mission.Deadline,
+                parentId,
+                childName
+            });
         }
     }
 }

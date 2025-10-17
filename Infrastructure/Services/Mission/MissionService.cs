@@ -15,6 +15,9 @@ using Azure;
 using Application.DTOs.Submission;
 using Application.Interfaces.Mission;
 using Infrastructure.Services.Mission;
+using Application.DTOs.Notification;
+using Application.Interfaces.Notification;
+using System.Text.Json;
 
 namespace Infrastructure.Services.Missions
 {
@@ -22,11 +25,13 @@ namespace Infrastructure.Services.Missions
     {
         private readonly LearnLinkDbContext _context;
         private readonly IMissionEventService _missionEventService;
+        private readonly INotificationService _notificationService;
 
-        public MissionService(LearnLinkDbContext context, IMissionEventService missionEventService)
+        public MissionService(LearnLinkDbContext context, IMissionEventService missionEventService, INotificationService notificationService)
         {
             _context = context;
             _missionEventService = missionEventService;
+            _notificationService = notificationService;
         }
 
         // Parent giao nhiệm vụ cho con
@@ -72,11 +77,93 @@ namespace Infrastructure.Services.Missions
             _context.Missions.Add(mission);
             await _context.SaveChangesAsync();
             await _missionEventService.MissionCreatedAsync(mission);
+            await _notificationService.AddNotificationAsync(new NotificationRequestDTO
+            {
+                UserId = mission.ChildId,
+                Type = NotificationType.MissionAssigned,
+                Payload = JsonSerializer.Serialize(new
+                {
+                    missionId = mission.MissionId,
+                    title = mission.Title,
+                    assignedBy = parent.Name
+                })
+            });
             return new AssignMissionResult(true, "Mission assigned successfully");
         }
 
-        // Parent xem danh sách nhiệm vụ của các con mình
-        public async Task<PageResultDTO<MissionDetailDTO>> ParentGetMissionsAsync(int parentId, int page = 1, int pageSize = 5)
+		public async Task<ApiResponse<MissionEditDTO>> ParentEditMission(int missionId, int parentId, MissionEditDTO dto)
+		{
+			var mission = await _context.Missions
+				.FirstOrDefaultAsync(m => m.MissionId == missionId && m.ParentId == parentId);
+
+			if (mission == null)
+				return new ApiResponse<MissionEditDTO>(false, "Mission not found or does not belong to this Parent");
+
+			if (mission.Status != MissionStatus.Assigned)
+				return new ApiResponse<MissionEditDTO>(false, "Only missions with status 'Assigned' can be edited");
+
+			bool isChanged = false;
+
+			if (!string.IsNullOrEmpty(dto.Title) && dto.Title != mission.Title)
+			{
+				mission.Title = dto.Title;
+				isChanged = true;
+			}
+
+			if (!string.IsNullOrEmpty(dto.Description) && dto.Description != mission.Description)
+			{
+				mission.Description = dto.Description;
+				isChanged = true;
+			}
+
+			if (dto.Points.HasValue && dto.Points.Value != mission.Points)
+			{
+				if (dto.Points.Value < 0)
+					return new ApiResponse<MissionEditDTO>(false, "Points cannot be negative");
+
+				mission.Points = dto.Points.Value;
+				isChanged = true;
+			}
+
+			if (!string.IsNullOrEmpty(dto.Promise) && dto.Promise != mission.Promise)
+			{
+				mission.Promise = dto.Promise;
+				isChanged = true;
+			}
+
+			if (!string.IsNullOrEmpty(dto.Punishment) && dto.Punishment != mission.Punishment)
+			{
+				mission.Punishment = dto.Punishment;
+				isChanged = true;
+			}
+
+			if (dto.Deadline.HasValue && dto.Deadline.Value != mission.Deadline)
+			{
+				if (dto.Deadline.Value < DateTime.UtcNow)
+					return new ApiResponse<MissionEditDTO>(false, "Deadline cannot be in the past");
+
+				mission.Deadline = dto.Deadline.Value;
+				isChanged = true;
+			}
+
+			// Xử lý AttachmentUrl từ DTO (nếu controller truyền vào link mới)
+			if (!string.IsNullOrEmpty(dto.AttachmentUrl) && dto.AttachmentUrl != mission.AttachmentUrl)
+			{
+				mission.AttachmentUrl = dto.AttachmentUrl;
+				isChanged = true;
+			}
+
+			if (!isChanged)
+				return new ApiResponse<MissionEditDTO>(false, "No changes detected, mission not updated");
+
+			mission.UpdatedAt = DateTime.UtcNow;
+			await _context.SaveChangesAsync();
+
+			return new ApiResponse<MissionEditDTO>(true, "Mission updated successfully");
+		}
+
+		// Parent xem danh sách nhiệm vụ của các con mình
+		public async Task<PageResultDTO<MissionDetailDTO>> ParentGetMissionsAsync(int parentId, int page = 1, int pageSize = 5)
         {
             var parent = await _context.Users
                 .Include(u => u.ParentRelations)
@@ -305,6 +392,7 @@ namespace Infrastructure.Services.Missions
                     Punishment = m.Punishment,
                     AttachmentUrl = m.AttachmentUrl,
                     CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt,
                     Submission = m.Submissions.OrderByDescending(s => s.SubmittedAt)
                         .Select(s => new SubmissionResponseDTO
                         {
@@ -324,36 +412,92 @@ namespace Infrastructure.Services.Missions
             return items;
         }
 
-        //public async Task<ApiResponse<MissionResponse1DTO>> GetMissionByIdAsync(int missionId, string childEmail)
-        //{
-        //    try
-        //    {
-        //        var child = await _context.Users
-        //            .FirstOrDefaultAsync(u => u.Email == childEmail && u.RoleId == (int)RoleEnum.Child);
-        //        if (child == null)
-        //        {
-        //            return new ApiResponse<MissionResponse1DTO>(false, "Không tìm thấy trẻ với email này.");
-        //        }
+		public async Task<ApiResponse<MissionByTimeRangeDTO>> ChildGetMissionsByAllRangesAsync(int childId)
+		{
+			var child = await _context.Users
+				.FirstOrDefaultAsync(u => u.userId == childId && u.RoleId == (int)RoleEnum.Child);
 
-        //        var mission = await _context.Missions
-        //            .Include(m => m.Parent)
-        //            .Include(m => m.Child)
-        //            .Include(m => m.Submissions)
-        //            .FirstOrDefaultAsync(m => m.MissionId == missionId && m.ChildId == child.userId);
+			if (child == null)
+				return new ApiResponse<MissionByTimeRangeDTO>(false, "Child not found");
 
-        //        if (mission == null)
-        //        {
-        //            return new ApiResponse<MissionResponse1DTO>(false, "Nhiệm vụ không tồn tại hoặc không được giao cho trẻ này.");
-        //        }
+			DateTime now = DateTime.UtcNow;
 
-        //        var response = MapToResponseDTO(mission);
-        //        return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ được lấy thành công.", response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return new ApiResponse<MissionResponse1DTO>(false, $"Lỗi khi lấy nhiệm vụ: {ex.Message}");
-        //    }
-        //}
-    }
+			// Ngày
+			var todayStart = now.Date;
+			var todayEnd = todayStart.AddDays(1);
+
+			// Tuần (tính từ thứ 2 -> CN)
+			int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+			var weekStart = now.AddDays(-diff).Date;
+			var weekEnd = weekStart.AddDays(7);
+
+			// Tháng
+			var monthStart = new DateTime(now.Year, now.Month, 1);
+			var monthEnd = monthStart.AddMonths(1);
+
+			// Query base
+			var baseQuery = _context.Missions
+				.Where(m => m.ChildId == childId);
+
+			var todayMissions = await baseQuery
+				.Where(m => m.CreatedAt >= todayStart && m.CreatedAt < todayEnd)
+				.OrderByDescending(m => m.CreatedAt)
+				.Select(m => new MissionResponseDTO
+				{
+					MissionId = m.MissionId,
+					Title = m.Title,
+					Description = m.Description,
+					Points = m.Points,
+					Deadline = m.Deadline,
+					Status = m.Status.ToString(),
+					CreatedAt = m.CreatedAt,
+					ChildId = m.ChildId
+				})
+				.ToListAsync();
+
+			var weekMissions = await baseQuery
+				.Where(m => m.CreatedAt >= weekStart && m.CreatedAt < weekEnd)
+				.OrderByDescending(m => m.CreatedAt)
+				.Select(m => new MissionResponseDTO
+				{
+					MissionId = m.MissionId,
+					Title = m.Title,
+					Description = m.Description,
+					Points = m.Points,
+					Deadline = m.Deadline,
+					Status = m.Status.ToString(),
+					CreatedAt = m.CreatedAt,
+					ChildId = m.ChildId
+				})
+				.ToListAsync();
+
+			var monthMissions = await baseQuery
+				.Where(m => m.CreatedAt >= monthStart && m.CreatedAt < monthEnd)
+				.OrderByDescending(m => m.CreatedAt)
+				.Select(m => new MissionResponseDTO
+				{
+					MissionId = m.MissionId,
+					Title = m.Title,
+					Description = m.Description,
+					Points = m.Points,
+					Deadline = m.Deadline,
+					Status = m.Status.ToString(),
+					CreatedAt = m.CreatedAt,
+					ChildId = m.ChildId
+				})
+				.ToListAsync();
+
+			var result = new MissionByTimeRangeDTO
+			{
+				TodayMissions = todayMissions,
+				WeekMissions = weekMissions,
+				MonthMissions = monthMissions
+			};
+
+			return new ApiResponse<MissionByTimeRangeDTO>(true, "Missions retrieved successfully", result);
+		}
+
+
+	}
 }
 

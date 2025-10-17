@@ -9,23 +9,28 @@ namespace Domain.Entities
 		public int RedemptionId { get; set; }
 
 		[ForeignKey("Reward")]
-		public int RewardId { get; set; }
-		public Reward Reward { get; set; }
+		public int? RewardId { get; set; }
+		public Reward Reward { get; set; } = null!;
 
-		[ForeignKey("Child")]
+        [ForeignKey("Product")] 
+		public int? ProductId { get; set; }
+        public Product Product { get; set; } = null!;
+
+        [ForeignKey("Child")]
 		public int ChildId { get; set; }
 		public User Child { get; set; }
 
-		public RedemptionStatus Status { get; set; } // pending | approved | rejected | delivered
-		public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
-		public DateTime? ApprovedAt { get; set; }
+        public int PointsSpent { get; set; }
+
+        public RedemptionStatus Status { get; set; } // pending | confirmed | cancelled | delivered
+		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 	}
 
 	public enum RedemptionStatus
 	{
 		Pending = 0,
-		Approved = 1,
-		Rejected = 2,
+        Confirmed = 1,
+        Cancelled = 2,
 		Delivered = 3
 	}
 }
