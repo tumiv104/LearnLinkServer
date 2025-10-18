@@ -13,5 +13,8 @@ namespace Application.Interfaces.Payment
 
         public Task<bool> HandleMoMoCallback(MoMoCallbackRequest callback);
         public Task<bool> UpdatePaymentStatus(int paymentId, string status);
+
+        Task<string> CreatePayOSPayment(int parentId, decimal amount);
+        Task<bool> HandlePayOSCallback(PayOSWebhookDto webhookData);
     }
 }

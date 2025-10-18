@@ -14,6 +14,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Infrastructure.Data;
 using System.Diagnostics;
+using Net.payOS.Types;
+using Net.payOS;
 
 namespace Infrastructure.Services.Payment
 {
@@ -32,7 +34,7 @@ namespace Infrastructure.Services.Payment
 
         public async Task<string> CreateMoMoPayment(int userId, decimal amount)
         {
-            var pointRate = Int32.Parse(_config["MoMo:PointRate"]);
+            var pointRate = Int32.Parse(_config["Payment:PointRate"]);
 
             var points = (int)(amount/pointRate); // 1000 VND = 1 points
             var payment = new Domain.Entities.Payment
@@ -47,13 +49,13 @@ namespace Infrastructure.Services.Payment
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
 
-
-            var partnerCode = _config["MoMo:PartnerCode"];
-            var accessKey = _config["MoMo:AccessKey"];
-            var secretKey = _config["MoMo:SecretKey"];
-            var endpoint = _config["MoMo:Endpoint"];
-            var returnUrl = _config["MoMo:ReturnUrl"];
-            var notifyUrl = _config["MoMo:NotifyUrl"];
+            var config = _config.GetSection("Payment:MoMo");
+            var partnerCode = config["PartnerCode"];
+            var accessKey = config["AccessKey"];
+            var secretKey = config["SecretKey"];
+            var endpoint = config["Endpoint"];
+            var returnUrl = config["ReturnUrl"];
+            var notifyUrl = config["NotifyUrl"];
             var requestId = Guid.NewGuid().ToString();
             var orderId = payment.PaymentId; 
             var amountStr = Convert.ToInt64(Math.Round(payment.Amount)).ToString();
@@ -104,7 +106,7 @@ namespace Infrastructure.Services.Payment
             {
                 payment.Status = PaymentStatus.Success;
 
-                var pointRate = int.Parse(_config["MoMo:PointRate"]);
+                var pointRate = int.Parse(_config["Payment:PointRate"]);
                 var points = (int)(callback.Amount * pointRate);
                 var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
                 if (point != null)
@@ -123,9 +125,9 @@ namespace Infrastructure.Services.Payment
 
         public bool VerifySignature(MoMoCallbackRequest callback)
         {
-            var secretKey = _config["MoMo:SecretKey"];
+            var secretKey = _config["Payment:MoMo:SecretKey"];
             var rawHash =
-                $"accessKey={_config["MoMo:AccessKey"]}" +
+                $"accessKey={_config["Payment:MoMo:AccessKey"]}" +
                 $"&amount={callback.Amount}" +
                 $"&extraData={callback.ExtraData}" +
                 $"&message={callback.Message}" +
@@ -152,7 +154,6 @@ namespace Infrastructure.Services.Payment
 
         public async Task<bool> UpdatePaymentStatus(int paymentId, string status)
         {
-            Debug.WriteLine("paymentId: " + paymentId,"status: " + status);
             var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == paymentId);
             if (payment == null) return false;
 
@@ -161,7 +162,7 @@ namespace Infrastructure.Services.Payment
                 payment.Status = PaymentStatus.Success;
 
                 // cộng điểm cho parent
-                var pointRate = int.Parse(_config["MoMo:PointRate"]);
+                var pointRate = int.Parse(_config["Payment:PointRate"]);
                 var points = (int)(payment.Amount/pointRate);
                 var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
                 if (point != null)
@@ -176,6 +177,117 @@ namespace Infrastructure.Services.Payment
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<string> CreatePayOSPayment(int parentId, decimal amount)
+        {
+            var config = _config.GetSection("Payment:PayOS");
+            var clientId = config["ClientId"];
+            var apiKey = config["ApiKey"];
+            var checksumKey = config["ChecksumKey"];
+            var returnUrl = config["ReturnUrl"];
+            var cancelUrl = config["CancelUrl"];
+
+            var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            //var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var items = new List<ItemData>
+            {
+                new ItemData("Top up points LearnLink", 1, (int)amount)
+            };
+
+            var payment = new Domain.Entities.Payment
+            {
+                ParentId = parentId,
+                Amount = amount,
+                Currency = "VND",
+                Method = "PayOS",
+                Status = PaymentStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Payments.Add(payment);
+            await _context.SaveChangesAsync();
+
+            var paymentData = new PaymentData(
+                payment.PaymentId,
+                (int)amount,
+                "Top up points via PayOS",
+                items,
+                cancelUrl,
+                returnUrl
+            );
+
+            var response = await payOS.createPaymentLink(paymentData);
+
+            return response.checkoutUrl;
+        }
+
+        public async Task<bool> HandlePayOSCallback(PayOSWebhookDto webhookData)
+        {
+            var config = _config.GetSection("Payment:PayOS");
+            var clientId = config["ClientId"];
+            var apiKey = config["ApiKey"];
+            var checksumKey = config["ChecksumKey"];
+
+            var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            try
+            {
+                var sdkWebhook = new WebhookType(
+                     webhookData.Code,
+                     webhookData.Desc,
+                     webhookData.Success,
+                     new WebhookData(
+                        orderCode: webhookData.Data.OrderCode,
+                        amount: (int)webhookData.Data.Amount,
+                        description: webhookData.Data.Description ?? "",
+                        accountNumber: null,
+                        reference: null,
+                        transactionDateTime: webhookData.Data.TransactionDateTime.ToString("O") ?? DateTime.UtcNow.ToString("O"),
+                        currency: "VND",
+                        paymentLinkId: null,
+                        code: webhookData.Code,
+                        desc: webhookData.Desc,
+                        counterAccountBankId: null,
+                        counterAccountBankName: null,
+                        counterAccountName: null,
+                        counterAccountNumber: null,
+                        virtualAccountName: null,
+                        virtualAccountNumber: null
+                     ),
+                     webhookData.Signature
+                 );
+
+                var verified = payOS.verifyPaymentWebhookData(sdkWebhook);
+                if (verified == null) return false;
+
+                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == verified.orderCode);
+                if (payment == null) return false;
+
+                if (verified.code == "00" || verified.desc.Contains("success", StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.Status = PaymentStatus.Success;
+
+                    var rate = int.Parse(_config["Payment:PointRate"]);
+                    var points = (int)(payment.Amount / rate);
+
+                    var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
+                    if (point != null)
+                        point.Balance += points;
+                }
+                else
+                {
+                    payment.Status = PaymentStatus.Failed;
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
