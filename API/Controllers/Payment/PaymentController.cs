@@ -3,6 +3,7 @@ using Application.Interfaces.Payment;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Net.payOS.Types;
 using System.Diagnostics;
 
 namespace API.Controllers.Payment
@@ -42,6 +43,22 @@ namespace API.Controllers.Payment
             return OkResponse(res);
         }
 
+        [HttpPost("payos-create")]
+        public async Task<IActionResult> CreatePayOS([FromBody] CreatePaymentRequest request)
+        {
+            var payUrl = await _paymentService.CreatePayOSPayment(request.ParentId, request.Amount);
+            return OkResponse<string>(payUrl);
+        }
+
+        [HttpPost("payos-callback")]
+        public async Task<IActionResult> PayOSCallback([FromBody] PayOSWebhookDto webhook)
+        {
+            var result = await _paymentService.HandlePayOSCallback(webhook);
+            if (!result)
+                return ErrorResponse("Callback verify failed");
+
+            return OkResponse(true);
+        }
 
     }
 
