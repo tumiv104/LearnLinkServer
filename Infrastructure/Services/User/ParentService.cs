@@ -56,6 +56,20 @@ public class ParentService : IParentService
         if (await _context.Users.AnyAsync(u => u.Email == childDTO.Email))
             return false;
 
+        var parent = await _context.Users
+      .Include(p => p.ParentRelations)
+      .FirstOrDefaultAsync(p => p.userId == parentId);
+
+        if (parent == null)
+            return false;
+
+        // ❗ Nếu chưa Premium mà đã có >= 1 con => không cho tạo thêm
+        if (!parent.IsPremium)
+        {
+            var currentChildrenCount = parent.ParentRelations?.Count ?? 0;
+            if (currentChildrenCount >= 1)
+                return false;
+        }
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
