@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Auth;
 using Application.Interfaces.Auth;
+using Application.Interfaces.Email;
 using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
@@ -19,14 +20,15 @@ namespace Infrastructure.Services.Auth
         private readonly ITokenService _tokenService;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IEmailService _emailService;
 
-
-        public AuthResponse(LearnLinkDbContext context, ITokenService tokenService, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
+        public AuthResponse(LearnLinkDbContext context, ITokenService tokenService, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, IEmailService emailService)
         {
             _context = context;
             _tokenService = tokenService;
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
+            _emailService = emailService;
         }
 
         public async Task<AuthResponseDTO?> AuthenticateUserAsync(UserLoginDTO userLoginDTO)
@@ -168,6 +170,8 @@ namespace Infrastructure.Services.Auth
             
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                await _emailService.SendWelcomeEmailAsync(user.Email, user.Name);
             }
             catch
             {

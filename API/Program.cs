@@ -34,6 +34,8 @@ using Application.Interfaces.Notification;
 using Infrastructure.Services.Notification;
 using Application.Interfaces.Manager;
 using Infrastructure.Services.Manager;
+using Application.Interfaces.Email;
+using Infrastructure.Services.Email;
 
 namespace API
 {
@@ -82,6 +84,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IManagerService, ManagerService>();
             builder.Services.AddScoped<IMissionEventService, MissionEventService>();
+            builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddHttpContextAccessor();
 
             //enable jwt token
