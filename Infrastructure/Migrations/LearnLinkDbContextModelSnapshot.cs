@@ -165,6 +165,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("ParentId")
                         .HasColumnType("int");
 
+                    b.Property<int>("Purpose")
+                        .HasColumnType("int");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)

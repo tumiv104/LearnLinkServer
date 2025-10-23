@@ -60,6 +60,25 @@ namespace API.Controllers.Payment
             return OkResponse(true);
         }
 
+        [HttpPost("payos-premium-create")]
+        public async Task<IActionResult> CreatePayOSPremium([FromBody] CreatePaymentRequest request)
+        {
+            var payUrl = await _paymentService.UpgradeToPremiumAsync(request.ParentId, request.Amount);
+            return OkResponse<string>(payUrl);
+        }
+
+
+        [HttpPost("payos-premium-callback")]
+        public async Task<IActionResult> PayOSPremiumCallback([FromBody] PayOSWebhookDto webhook)
+        {
+            var result = await _paymentService.HandlePayOSCallbackForPremium(webhook);
+            if (!result)
+                return ErrorResponse("Callback verify failed for premium upgrade");
+
+            return OkResponse(true);
+        }
+
+
     }
 
     public class UpdatePaymentRequest

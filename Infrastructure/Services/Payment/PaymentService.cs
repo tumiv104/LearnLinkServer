@@ -203,6 +203,7 @@ namespace Infrastructure.Services.Payment
                 Currency = "VND",
                 Method = "PayOS",
                 Status = PaymentStatus.Pending,
+                Purpose = PaymentPurpose.TopUpPoints,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -289,5 +290,117 @@ namespace Infrastructure.Services.Payment
                 return false;
             }
         }
+
+        public async Task<string> UpgradeToPremiumAsync(int userId, decimal amount)
+        {
+            var payment = new Domain.Entities.Payment
+            {
+                ParentId = userId,
+                Amount = amount,
+                Currency = "VND",
+                Method = "PayOS", 
+                Status = PaymentStatus.Pending,
+                Purpose = PaymentPurpose.UpgradePremium,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Payments.Add(payment);
+            await _context.SaveChangesAsync();
+
+            var config = _config.GetSection("Payment:PayOS");
+            var clientId = config["ClientId"];
+            var apiKey = config["ApiKey"];
+            var checksumKey = config["ChecksumKey"];
+            var returnUrl = config["ReturnUrl"];
+            var cancelUrl = config["CancelUrl"];
+
+            var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            var items = new List<ItemData>
+                {
+                    new ItemData("LearnLink Premium", 1, (int)amount)
+                };
+
+
+            var paymentData = new PaymentData(
+                payment.PaymentId,
+                (int)amount,
+                "LearnLink Premium Upgrade",
+                items,
+                cancelUrl,
+                returnUrl
+            );
+
+            var response = await payOS.createPaymentLink(paymentData);
+
+            return response.checkoutUrl;
+        }
+
+        public async Task<bool> HandlePayOSCallbackForPremium(PayOSWebhookDto webhookData)
+        {
+            var config = _config.GetSection("Payment:PayOS");
+            var clientId = config["ClientId"];
+            var apiKey = config["ApiKey"];
+            var checksumKey = config["ChecksumKey"];
+
+            var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            try
+            {
+                var sdkWebhook = new WebhookType(
+                     webhookData.Code,
+                     webhookData.Desc,
+                     webhookData.Success,
+                     new WebhookData(
+                        orderCode: webhookData.Data.OrderCode,
+                        amount: (int)webhookData.Data.Amount,
+                        description: webhookData.Data.Description ?? "",
+                        accountNumber: null,
+                        reference: null,
+                        transactionDateTime: webhookData.Data.TransactionDateTime.ToString("O"),
+                        currency: "VND",
+                        paymentLinkId: null,
+                        code: webhookData.Code,
+                        desc: webhookData.Desc,
+                        counterAccountBankId: null,
+                        counterAccountBankName: null,
+                        counterAccountName: null,
+                        counterAccountNumber: null,
+                        virtualAccountName: null,
+                        virtualAccountNumber: null
+                     ),
+                     webhookData.Signature
+                 );
+
+                var verified = payOS.verifyPaymentWebhookData(sdkWebhook);
+                if (verified == null) return false;
+
+                var payment = await _context.Payments
+                    .Include(p => p.Parent)
+                    .FirstOrDefaultAsync(p => p.PaymentId == verified.orderCode);
+                if (payment == null) return false;
+
+                if (verified.code == "00" || verified.desc.Contains("success", StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.Status = PaymentStatus.Success;
+
+                    payment.Parent.IsPremium = true;
+                    payment.Parent.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    payment.Status = PaymentStatus.Failed;
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
     }
 }

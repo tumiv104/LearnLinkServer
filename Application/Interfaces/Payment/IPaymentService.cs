@@ -16,5 +16,7 @@ namespace Application.Interfaces.Payment
 
         Task<string> CreatePayOSPayment(int parentId, decimal amount);
         Task<bool> HandlePayOSCallback(PayOSWebhookDto webhookData);
+        Task<string> UpgradeToPremiumAsync(int userId, decimal amount);
+        Task<bool> HandlePayOSCallbackForPremium(PayOSWebhookDto webhookData);
     }
 }

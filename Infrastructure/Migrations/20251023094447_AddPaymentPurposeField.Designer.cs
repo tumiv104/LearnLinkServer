@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(LearnLinkDbContext))]
-    [Migration("20251022164049_AddIsPremiumToUser")]
-    partial class AddIsPremiumToUser
+    [Migration("20251023094447_AddPaymentPurposeField")]
+    partial class AddPaymentPurposeField
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -166,6 +166,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ParentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Purpose")
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
