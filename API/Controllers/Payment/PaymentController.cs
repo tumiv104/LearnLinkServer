@@ -39,7 +39,7 @@ namespace API.Controllers.Payment
         [HttpPost("update-status")]
         public async Task<IActionResult> UpdatePaymentStatus(UpdatePaymentRequest updatePaymentRequest)
         {
-            var res = await _paymentService.UpdatePaymentStatus(updatePaymentRequest.paymentId, updatePaymentRequest.status);
+            var res = await _paymentService.UpdatePaymentStatus(updatePaymentRequest.orderCode, updatePaymentRequest.status);
             return OkResponse(res);
         }
 
@@ -83,7 +83,7 @@ namespace API.Controllers.Payment
 
     public class UpdatePaymentRequest
     {
-        public int paymentId { get; set; }
+        public string orderCode { get; set; }
         public string status { get; set; }
     }
 }

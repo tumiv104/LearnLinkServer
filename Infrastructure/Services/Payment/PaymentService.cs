@@ -152,22 +152,47 @@ namespace Infrastructure.Services.Payment
             return BitConverter.ToString(hash).Replace("-", "").ToLower();
         }
 
-        public async Task<bool> UpdatePaymentStatus(int paymentId, string status)
+        private long GenerateOrderCode(int paymentId)
         {
-            var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string orderCodeStr = $"{timestamp}{paymentId:D4}";
+
+            return long.Parse(orderCodeStr);
+        }
+
+        private int ExtractPaymentIdFromOrderCode(string orderCodeStr)
+        {
+            string paymentIdStr = orderCodeStr[^4..];
+
+            return int.Parse(paymentIdStr);
+        }
+
+        public async Task<bool> UpdatePaymentStatus(string orderCode, string status)
+        {
+            var paymentId = ExtractPaymentIdFromOrderCode(orderCode);
+            var payment = await _context.Payments.Include(p => p.Parent).FirstOrDefaultAsync(p => p.PaymentId == paymentId);
             if (payment == null) return false;
 
             if (status == "success") // thanh toán thành công
             {
                 payment.Status = PaymentStatus.Success;
 
-                // cộng điểm cho parent
-                var pointRate = int.Parse(_config["Payment:PointRate"]);
-                var points = (int)(payment.Amount/pointRate);
-                var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
-                if (point != null)
+                if (payment.Purpose == PaymentPurpose.TopUpPoints)
                 {
-                    point.Balance += points;
+                    // cộng điểm cho parent
+                    var pointRate = int.Parse(_config["Payment:PointRate"]);
+                    var points = (int)(payment.Amount / pointRate);
+                    var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
+                    if (point != null)
+                    {
+                        point.Balance += points;
+                    }
+                }
+                else if (payment.Purpose == PaymentPurpose.UpgradePremium)
+                {
+                    // upgrade to premium
+                    payment.Parent.IsPremium = true;
+                    payment.Parent.UpdatedAt = DateTime.UtcNow;
                 }
             }
             else
@@ -210,8 +235,10 @@ namespace Infrastructure.Services.Payment
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
 
+            var orderCode = GenerateOrderCode(payment.PaymentId);
+
             var paymentData = new PaymentData(
-                payment.PaymentId,
+                orderCode,
                 (int)amount,
                 "Top up points via PayOS",
                 items,
@@ -321,9 +348,10 @@ namespace Infrastructure.Services.Payment
                     new ItemData("LearnLink Premium", 1, (int)amount)
                 };
 
+            var orderCode = GenerateOrderCode(payment.PaymentId);
 
             var paymentData = new PaymentData(
-                payment.PaymentId,
+                orderCode,
                 (int)amount,
                 "LearnLink Premium Upgrade",
                 items,
