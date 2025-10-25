@@ -1,4 +1,5 @@
-﻿using Application.DTOs.User;
+﻿using Application.Common.Models;
+using Application.DTOs.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,8 @@ namespace Application.Interfaces.User
     public interface IParentService
     {
         Task<List<ChildBasicInfoDTO>> GetChildrenAsync(int parentId);
-        Task<bool> CreateChildAsync(int parentId, ChildCreateDTO childDTO);
+
+        Task<ServiceResult> CreateChildAsync(int parentId, ChildCreateDTO childDTO);
         Task<UserProfileDTO?> GetChildProfileAsync(int parentId, int childId);
     }
 }

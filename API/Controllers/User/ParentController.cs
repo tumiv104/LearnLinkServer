@@ -36,7 +36,10 @@ public class ParentController : BaseController
 
     [HttpPost("children")]
     [Authorize(Roles = "Parent")]
-    public async Task<IActionResult> CreateChild([FromForm] ChildCreateDTO childDTO, [FromServices] IFileStorage fileStorage, [FromServices] IWebHostEnvironment env)
+    public async Task<IActionResult> CreateChild(
+       [FromForm] ChildCreateDTO childDTO,
+       [FromServices] IFileStorage fileStorage,
+       [FromServices] IWebHostEnvironment env)
     {
         var parentIdClaim = User.FindFirstValue("id");
         if (string.IsNullOrEmpty(parentIdClaim))
@@ -44,18 +47,20 @@ public class ParentController : BaseController
 
         var parentId = int.Parse(parentIdClaim);
 
-        // Upload avatar nếu có
         if (childDTO.AvatarFile != null)
         {
             using var stream = childDTO.AvatarFile.OpenReadStream();
             var url = await fileStorage.SaveAsync(stream, childDTO.AvatarFile.FileName, "avatars", env.WebRootPath);
             childDTO.AvatarUrl = url;
         }
-        var success = await _parentService.CreateChildAsync(parentId, childDTO);
-        if (!success) return BadRequestResponse("Failed to create child");
 
-        return OkResponse<object>(null, "Child created successfully");
+        var result = await _parentService.CreateChildAsync(parentId, childDTO);
+        if (!result.Success)
+            return BadRequestResponse(result.Message); 
+
+        return OkResponse<object>(null, result.Message);
     }
+
 
     [HttpGet("children/{childId}")]
     [Authorize(Roles = "Parent")]

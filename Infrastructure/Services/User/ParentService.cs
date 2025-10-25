@@ -1,4 +1,5 @@
-﻿using Application.DTOs.User;
+﻿using Application.Common.Models;
+using Application.DTOs.User;
 using Application.Interfaces;
 using Application.Interfaces.User;
 using Domain.Entities;
@@ -39,37 +40,38 @@ public class ParentService : IParentService
         }).ToList();
     }
 
-    public async Task<bool> CreateChildAsync(int parentId, ChildCreateDTO childDTO)
+    public async Task<ServiceResult> CreateChildAsync(int parentId, ChildCreateDTO childDTO)
     {
         if (!System.Text.RegularExpressions.Regex.IsMatch(
             childDTO.Email ?? "",
             @"^[^@\s]+@[^@\s]+\.[^@\s]+$"
         ))
-            return false;
+            return ServiceResult.Fail("Invalid email format.");
 
         if (string.IsNullOrWhiteSpace(childDTO.Password) || childDTO.Password.Length < 6 || childDTO.Password.Contains(" "))
-            return false;
+            return ServiceResult.Fail("Password must be at least 6 characters and contain no spaces.");
 
         if (childDTO.Dob >= DateTime.UtcNow.Date)
-            return false;
+            return ServiceResult.Fail("Invalid date of birth.");
 
         if (await _context.Users.AnyAsync(u => u.Email == childDTO.Email))
-            return false;
+            return ServiceResult.Fail("Email already exists.");
 
         var parent = await _context.Users
-      .Include(p => p.ParentRelations)
-      .FirstOrDefaultAsync(p => p.userId == parentId);
+            .Include(p => p.ParentRelations)
+            .FirstOrDefaultAsync(p => p.userId == parentId);
 
         if (parent == null)
-            return false;
+            return ServiceResult.Fail("Parent not found.");
 
-        // ❗ Nếu chưa Premium mà đã có >= 1 con => không cho tạo thêm
+        // ❗ Giới hạn con nếu chưa Premium
         if (!parent.IsPremium)
         {
             var currentChildrenCount = parent.ParentRelations?.Count ?? 0;
             if (currentChildrenCount >= 1)
-                return false;
+                return ServiceResult.Fail("You have reached the child limit. Upgrade to Premium to add more children.");
         }
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -106,14 +108,15 @@ public class ParentService : IParentService
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return true;
+            return ServiceResult.Ok("Child created successfully.");
         }
-        catch
+        catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            return false;
+            return ServiceResult.Fail("An error occurred while creating the child: " + ex.Message);
         }
     }
+
     public async Task<UserProfileDTO?> GetChildProfileAsync(int parentId, int childId)
     {
         var isChildOfParent = await _context.ParentChildren
