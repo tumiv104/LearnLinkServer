@@ -55,10 +55,10 @@ public class ParentController : BaseController
         }
 
         var result = await _parentService.CreateChildAsync(parentId, childDTO);
-        if (!result.Success)
-            return BadRequestResponse(result.Message); 
+        if (result != "")
+            return BadRequestResponse(result); 
 
-        return OkResponse<object>(null, result.Message);
+        return OkResponse(result);
     }
 
 
