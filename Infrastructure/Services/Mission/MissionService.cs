@@ -58,6 +58,19 @@ namespace Infrastructure.Services.Missions
             if (parentPoint == null || parentPoint.Balance < dto.Points)
                 return new AssignMissionResult(false, "Parent does not have enough points to assign this mission");
 
+            var todayStart = DateTime.UtcNow.Date;
+            var todayEnd = todayStart.AddDays(1);
+
+            var missionsTodayCount = await _context.Missions
+                .Where(m => m.ParentId == parentId && m.CreatedAt >= todayStart && m.CreatedAt < todayEnd)
+                .CountAsync();
+
+            if (!parent.IsPremium && missionsTodayCount >= 3)
+            {
+                return new AssignMissionResult(false,
+                    "You have reached the limit of missions for today. Come back tomorrow or upgrade to premium to assign more missions.");
+            }
+
             var mission = new Domain.Entities.Mission
             {
                 ParentId = parentId,
