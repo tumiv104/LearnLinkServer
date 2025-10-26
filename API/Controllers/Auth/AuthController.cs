@@ -68,5 +68,13 @@ namespace API.Controllers.Auth
             if (!success) return BadRequestResponse("Logout fail");
             return OkResponse<object>(null, "Logout successful");
         }
+
+        [HttpPost("google")]
+        public async Task<IActionResult> LoginWithGoogle([FromBody] GoogleLoginRequest dto)
+        {
+            var result = await _authResponse.AuthenticateGoogleAsync(dto);
+            if (result == null) return UnauthorizedResponse("Invalid Google token");
+            return OkResponse(result, "Login successful");
+        }
     }
 }

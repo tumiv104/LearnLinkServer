@@ -79,7 +79,7 @@ namespace Infrastructure.Services.Missions
                 ParentId = parentId,
                 ChildId = dto.ChildId,
                 Title = dto.Title,
-                Description = dto.Description,
+                Description = dto.Description ?? "",
                 Points = dto.Points,
                 Promise = dto.Promise,
                 Punishment = dto.Punishment,
