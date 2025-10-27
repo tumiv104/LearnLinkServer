@@ -16,6 +16,8 @@ namespace Application.Interfaces.Email
         Task<bool> SendMissionStartedEmailAsync(string email, string createBy, string sendTo, string missionTitle);
         Task<bool> SendMissionSubmittedEmailAsync(string email, string createBy, string sendTo, string missionTitle);
         Task<bool> SendMissionReviewedEmailAsync(string email, string createBy, string sendTo, string missionTitle, string status, string feedback, int? score);
+        Task<bool> SendPasswordResetEmailAsync(string email, string resetLink, string userName);
+
 
     }
 }

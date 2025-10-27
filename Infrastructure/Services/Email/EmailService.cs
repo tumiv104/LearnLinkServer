@@ -156,6 +156,24 @@ namespace Infrastructure.Services.Email
             }
         }
 
+        public async Task<bool> SendPasswordResetEmailAsync(string email, string resetLink, string userName)
+        {
+            string subject = "🔐 Đặt lại mật khẩu LearnLink";
+            string body = $@"
+        Xin chào {userName},<br/><br/>
+        Chúng tôi nhận được yêu cầu đặt lại mật khẩu của bạn.<br/>
+        Vui lòng nhấp vào liên kết bên dưới để đặt lại mật khẩu:<br/><br/>
+        <a href='{resetLink}' 
+           style='display:inline-block; background-color:#4CAF50; color:white; padding:10px 20px;
+                  text-decoration:none; border-radius:5px;'>Đặt lại mật khẩu</a><br/><br/>
+        Liên kết này sẽ hết hạn sau 15 phút.<br/><br/>
+        Nếu bạn không yêu cầu, vui lòng bỏ qua email này.";
+
+            await SendEmailAsync(email, subject, body);
+            return true;
+        }
+
+
         private string GenerateMissionCreatedEmailBody(string sendTo, string missionTitle, string createdBy, string deadline)
         {
             var beUrl = _configuration["Settings:BeUrl"];

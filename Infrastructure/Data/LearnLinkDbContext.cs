@@ -7,7 +7,8 @@ namespace Infrastructure.Data
 	{
 		public LearnLinkDbContext(DbContextOptions<LearnLinkDbContext> options) : base(options) { }
 
-		public DbSet<Role> Roles { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<Role> Roles { get; set; }
 		public DbSet<User> Users { get; set; }
 		public DbSet<ParentChild> ParentChildren { get; set; }
 		public DbSet<Mission> Missions { get; set; }
