@@ -2,6 +2,7 @@
 using Application.DTOs.Mission;
 using Application.DTOs.Notification;
 using Application.DTOs.Submission;
+using Application.Interfaces.Email;
 using Application.Interfaces.Mission;
 using Application.Interfaces.Notification;
 using Application.Interfaces.Submission;
@@ -18,12 +19,14 @@ namespace Infrastructure.Services.Submissions
 		private readonly LearnLinkDbContext _context;
         private readonly IMissionEventService _missionEventService;
 		private readonly INotificationService _notificationService;
+        private readonly IEmailService _emailService;
 
-        public SubmissionService(LearnLinkDbContext context, IMissionEventService missionEventService, INotificationService notificationService)
+        public SubmissionService(LearnLinkDbContext context, IMissionEventService missionEventService, INotificationService notificationService, IEmailService emailService)
 		{
 			_context = context;
             _missionEventService = missionEventService;
 			_notificationService = notificationService;
+			_emailService = emailService;
         }
 
 		public async Task<ApiResponse<SubmissionResponseDTO>> ApproveSubmissionAsync(ReviewSubmissionDTO submissionDto, int parentId) { 
@@ -92,6 +95,8 @@ namespace Infrastructure.Services.Submissions
 						feedback = submission?.Feedback ?? null,
                     })
                 });
+                var parent = await _context.Users.Where(u => u.userId == parentId).FirstOrDefaultAsync();
+                await _emailService.SendMissionReviewedEmailAsync(submission.Child.Email, parent.Name, submission.Child.Name, submission.Mission.Title, "approved", submission.Feedback ?? "", submission.Score);
                 return new ApiResponse<SubmissionResponseDTO>(true, "Submission approved successfully.",
 					MapToDTO(submission));
 			}
@@ -114,7 +119,7 @@ namespace Infrastructure.Services.Submissions
 					.FirstOrDefaultAsync(s => s.SubmissionId == submissionDto.SubmissionId
 					);
 
-				if (submission == null)
+                if (submission == null)
 					return new ApiResponse<SubmissionResponseDTO>(false, "Submission not found.");
 
 				if (submission.Mission.ParentId != parentId)
@@ -148,6 +153,8 @@ namespace Infrastructure.Services.Submissions
                         feedback = submission?.Feedback ?? null,
                     })
                 });
+                var parent = await _context.Users.Where(u => u.userId == parentId).FirstOrDefaultAsync();
+                await _emailService.SendMissionReviewedEmailAsync(submission.Child.Email, parent.Name, submission.Child.Name, submission.Mission.Title, "rejected", submission.Feedback ?? "", submission.Score);
                 return new ApiResponse<SubmissionResponseDTO>(true, "Submission rejected successfully.",
 					MapToDTO(submission));
 			}
@@ -313,6 +320,7 @@ namespace Infrastructure.Services.Submissions
                         childName = child.Name,
                     })
                 });
+				await _emailService.SendMissionSubmittedEmailAsync(mission.Parent.Email, child.Name, mission.Parent.Name, mission.Title);
                 return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được nộp thành công với ảnh.", response);
 			}
 			catch (Exception ex)

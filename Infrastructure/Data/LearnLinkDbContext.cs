@@ -21,6 +21,7 @@ namespace Infrastructure.Data
 		public DbSet<Notification> Notifications { get; set; }
 		public DbSet<Payment> Payments { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<ExternalLogin> ExternalLogins { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
@@ -105,7 +106,13 @@ namespace Infrastructure.Data
 				.HasConversion<string>()
 				.HasMaxLength(20);
 
-			base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ExternalLogin>()
+				.HasOne(el => el.User)
+				.WithMany(u => u.ExternalLogins)
+				.HasForeignKey(el => el.UserId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+            base.OnModelCreating(modelBuilder);
 		}
 	}
 }

@@ -18,6 +18,7 @@ using Infrastructure.Services.Mission;
 using Application.DTOs.Notification;
 using Application.Interfaces.Notification;
 using System.Text.Json;
+using Application.Interfaces.Email;
 
 namespace Infrastructure.Services.Missions
 {
@@ -26,12 +27,14 @@ namespace Infrastructure.Services.Missions
         private readonly LearnLinkDbContext _context;
         private readonly IMissionEventService _missionEventService;
         private readonly INotificationService _notificationService;
+        private readonly IEmailService _emailService;
 
-        public MissionService(LearnLinkDbContext context, IMissionEventService missionEventService, INotificationService notificationService)
+        public MissionService(LearnLinkDbContext context, IMissionEventService missionEventService, INotificationService notificationService, IEmailService emailService)
         {
             _context = context;
             _missionEventService = missionEventService;
             _notificationService = notificationService;
+            _emailService = emailService;
         }
 
         // Parent giao nhiệm vụ cho con
@@ -76,7 +79,7 @@ namespace Infrastructure.Services.Missions
                 ParentId = parentId,
                 ChildId = dto.ChildId,
                 Title = dto.Title,
-                Description = dto.Description,
+                Description = dto.Description ?? "",
                 Points = dto.Points,
                 Promise = dto.Promise,
                 Punishment = dto.Punishment,
@@ -101,6 +104,10 @@ namespace Infrastructure.Services.Missions
                     assignedBy = parent.Name
                 })
             });
+
+            var child = await _context.Users.Where(u => u.userId == dto.ChildId).FirstOrDefaultAsync();
+
+            if (child != null) await _emailService.SendMissionCreatedEmailAsync(child.Email, parent.Name, child.Name, mission.Title, mission.Deadline.ToString());
             return new AssignMissionResult(true, "Mission assigned successfully");
         }
 

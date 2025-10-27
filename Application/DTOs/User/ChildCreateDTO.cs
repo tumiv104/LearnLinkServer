@@ -12,7 +12,7 @@ namespace Application.DTOs.User
         public string Name { get; set; }
         public string Email { get; set; }
         public string Password { get; set; }
-        public DateTime Dob { get; set; }
+        public DateTime? Dob { get; set; }
         public string? AvatarUrl { get; set; }
         public IFormFile? AvatarFile { get; set; }
     }
