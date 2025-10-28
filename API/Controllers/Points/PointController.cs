@@ -19,6 +19,7 @@ namespace API.Controllers.Points
         }
 
         [HttpGet("detail/{userId}")]
+        [Authorize]
         public async Task<IActionResult> GetPointDetailByUserId(int userId)
         {
             var pointRes = await _pointService.GetPointByUserId(userId);
@@ -56,6 +57,7 @@ namespace API.Controllers.Points
         }
 
         [HttpPost("redemption/updateStatus")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateStatus(UpdateStatusRedemptionDTO dto)
         {
             var res = await _pointService.UpdateRedemptionStatus(dto.RedemptionId, dto.NewStatus);

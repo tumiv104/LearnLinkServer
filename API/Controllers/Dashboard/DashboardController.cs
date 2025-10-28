@@ -17,16 +17,10 @@ namespace API.Controllers.Dashboard
             _dashboardService = dashboardService;
         }
 
-        [HttpGet("parent-overview")]
+        [HttpGet("parent-overview/{parentId}")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> GetParentOverview()
+        public async Task<IActionResult> GetParentOverview(int parentId)
         {
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim))
-                return UnauthorizedResponse();
-
-            var parentId = int.Parse(parentIdClaim);
-
             var result = await _dashboardService.GetParentOverviewAsync(parentId);
             if (result == null)
                 return NotFoundResponse("No data found for this parent");

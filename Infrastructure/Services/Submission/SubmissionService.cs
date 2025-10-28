@@ -96,7 +96,7 @@ namespace Infrastructure.Services.Submissions
                     })
                 });
                 var parent = await _context.Users.Where(u => u.userId == parentId).FirstOrDefaultAsync();
-                await _emailService.SendMissionReviewedEmailAsync(submission.Child.Email, parent.Name, submission.Child.Name, submission.Mission.Title, "approved", submission.Feedback ?? "", submission.Score);
+                _ = Task.Run(() => _emailService.SendMissionReviewedEmailAsync(submission.Child.Email, parent.Name, submission.Child.Name, submission.Mission.Title, "approved", submission.Feedback ?? "", submission.Score));
                 return new ApiResponse<SubmissionResponseDTO>(true, "Submission approved successfully.",
 					MapToDTO(submission));
 			}
@@ -154,7 +154,7 @@ namespace Infrastructure.Services.Submissions
                     })
                 });
                 var parent = await _context.Users.Where(u => u.userId == parentId).FirstOrDefaultAsync();
-                await _emailService.SendMissionReviewedEmailAsync(submission.Child.Email, parent.Name, submission.Child.Name, submission.Mission.Title, "rejected", submission.Feedback ?? "", submission.Score);
+                _ = Task.Run(() => _emailService.SendMissionReviewedEmailAsync(submission.Child.Email, parent.Name, submission.Child.Name, submission.Mission.Title, "rejected", submission.Feedback ?? "", submission.Score));
                 return new ApiResponse<SubmissionResponseDTO>(true, "Submission rejected successfully.",
 					MapToDTO(submission));
 			}
@@ -320,7 +320,7 @@ namespace Infrastructure.Services.Submissions
                         childName = child.Name,
                     })
                 });
-				await _emailService.SendMissionSubmittedEmailAsync(mission.Parent.Email, child.Name, mission.Parent.Name, mission.Title);
+                _ = Task.Run(() => _emailService.SendMissionSubmittedEmailAsync(mission.Parent.Email, child.Name, mission.Parent.Name, mission.Title));
                 return new ApiResponse<MissionResponse1DTO>(true, "Nhiệm vụ đã được nộp thành công với ảnh.", response);
 			}
 			catch (Exception ex)

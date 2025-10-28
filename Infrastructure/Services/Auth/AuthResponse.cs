@@ -2,6 +2,7 @@
 using Application.Interfaces.Auth;
 using Application.Interfaces.Email;
 using Domain.Entities;
+using Google.Apis.Auth;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -191,6 +192,115 @@ namespace Infrastructure.Services.Auth
             await _context.SaveChangesAsync();
             _httpContextAccessor.HttpContext.Response.Cookies.Delete("refreshToken");
             return true;
+        }
+
+        public async Task<AuthResponseDTO?> AuthenticateGoogleAsync(GoogleLoginRequest request)
+        {
+            // Xác minh token từ Google
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _configuration["GoogleAuth:ClientId"] }
+                });
+            }
+            catch
+            {
+                return null; // Token không hợp lệ
+            }
+
+            // Tìm ExternalLogin theo ProviderKey (Google ID)
+            var external = await _context.ExternalLogins
+                .Include(e => e.User)
+                .ThenInclude(u => u.Role)
+                .FirstOrDefaultAsync(e => e.Provider == "Google" && e.ProviderKey == payload.Subject);
+
+            Domain.Entities.User? user = null;
+
+            if (external != null)
+            {
+                // Người dùng đã đăng nhập Google trước đó
+                user = external.User;
+            }
+            else
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // Kiểm tra xem email đã có trong hệ thống chưa
+                    user = await _context.Users.Include(u => u.Role)
+                        .FirstOrDefaultAsync(u => u.Email == payload.Email);
+
+                    if (user == null)
+                    {
+                        var defaultRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleId == 2);
+                        // Tạo user mới
+                        user = new Domain.Entities.User
+                        {
+                            Name = payload.Name ?? payload.Email,
+                            Email = payload.Email,
+                            Password = "google", // Google login không dùng password
+                            AvatarUrl = payload.Picture,
+                            RoleId = 2, // mặc định: Parent/Child tùy hệ thống
+                            Role = defaultRole,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await _context.Users.AddAsync(user);
+
+                        // Cộng thêm khởi tạo Point nếu cần
+                        await _context.Points.AddAsync(new Point
+                        {
+                            User = user,
+                            Balance = 0,
+                            UpdatedAt = DateTime.UtcNow
+                        });
+                    }
+
+                    // Thêm ExternalLogin
+                    var newExternal = new ExternalLogin
+                    {
+                        User = user,
+                        Provider = "Google",
+                        ProviderKey = payload.Subject
+                    };
+                    await _context.ExternalLogins.AddAsync(newExternal);
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _ = Task.Run(() => _emailService.SendWelcomeEmailAsync(user.Email, user.Name));
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                }
+                
+            }
+            if (user == null) return null;
+            
+            // Tạo access + refresh token
+            var accessToken = _tokenService.GenerateAccessToken(user);
+            var refreshToken = _tokenService.GenerateRefreshToken(user.userId);
+
+            _context.RefreshTokens.Add(refreshToken);
+            await _context.SaveChangesAsync();
+
+            _httpContextAccessor.HttpContext.Response.Cookies.Append("refreshToken", refreshToken.Token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = refreshToken.Expires
+            });
+
+            var accessTokenExpiryMinutes = int.TryParse(_configuration["JwtSettings:AccessTokenExpiryMinutes"], out var val) ? val : 15;
+            return new AuthResponseDTO
+            {
+                AccessToken = accessToken,
+                AccessTokenExpiresAt = DateTime.UtcNow.AddMinutes(accessTokenExpiryMinutes)
+            };
         }
     }
 }

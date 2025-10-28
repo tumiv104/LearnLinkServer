@@ -57,10 +57,13 @@ namespace Infrastructure.Services.Missions
             if (dto.Points < 0)
                 return new AssignMissionResult(false, "Points cannot be negative");
 
-            var parentPoint = await _context.Points.FirstOrDefaultAsync(p => p.UserId == parentId);
-            if (parentPoint == null || parentPoint.Balance < dto.Points)
-                return new AssignMissionResult(false, "Parent does not have enough points to assign this mission");
-
+            if (dto.Points > 0)
+            {
+                var parentPoint = await _context.Points.FirstOrDefaultAsync(p => p.UserId == parentId);
+                if (parentPoint == null || parentPoint.Balance < dto.Points)
+                    return new AssignMissionResult(false, "Parent does not have enough points to assign this mission");
+            }
+            
             var todayStart = DateTime.UtcNow.Date;
             var todayEnd = todayStart.AddDays(1);
 
@@ -79,7 +82,7 @@ namespace Infrastructure.Services.Missions
                 ParentId = parentId,
                 ChildId = dto.ChildId,
                 Title = dto.Title,
-                Description = dto.Description,
+                Description = dto.Description ?? "",
                 Points = dto.Points,
                 Promise = dto.Promise,
                 Punishment = dto.Punishment,
@@ -107,7 +110,7 @@ namespace Infrastructure.Services.Missions
 
             var child = await _context.Users.Where(u => u.userId == dto.ChildId).FirstOrDefaultAsync();
 
-            if (child != null) await _emailService.SendMissionCreatedEmailAsync(child.Email, parent.Name, child.Name, mission.Title, mission.Deadline.ToString());
+            if (child != null) _ = Task.Run(() => _emailService.SendMissionCreatedEmailAsync(child.Email, parent.Name, child.Name, mission.Title, mission.Deadline.ToString()));
             return new AssignMissionResult(true, "Mission assigned successfully");
         }
 

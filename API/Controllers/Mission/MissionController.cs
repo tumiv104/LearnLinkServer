@@ -30,17 +30,12 @@ namespace API.Controllers.Mission
         }
 
         // Parent giao nhiệm vụ cho con
-        [HttpPost("assign")]
+        [HttpPost("{parentId}/assign")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> AssignMission([FromForm] MissionAssignDTO dto, IFormFile? attachmentFile)
+        public async Task<IActionResult> AssignMission(int parentId, [FromForm] MissionAssignDTO dto, IFormFile? attachmentFile)
         {
             if (!ModelState.IsValid)
                 return BadRequestResponse("Invalid data");
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim))
-                return UnauthorizedResponse();
-
-            var parentId = int.Parse(parentIdClaim);
 
             if (attachmentFile != null)
             {
@@ -56,16 +51,10 @@ namespace API.Controllers.Mission
             return OkResponse<object>(null, result.Message);
         }
 
-		[HttpPut("edit/{missionId}")]
+		[HttpPut("{parentId}/edit/{missionId}")]
 		[Authorize(Roles = "Parent")]
-		public async Task<IActionResult> EditMission(int missionId, [FromForm] MissionEditDTO dto, IFormFile? attachmentFile)
+		public async Task<IActionResult> EditMission(int parentId, int missionId, [FromForm] MissionEditDTO dto, IFormFile? attachmentFile)
 		{
-			var parentIdClaim = User.FindFirstValue("id");
-			if (string.IsNullOrEmpty(parentIdClaim))
-				return UnauthorizedResponse();
-
-			var parentId = int.Parse(parentIdClaim);
-
 			// Nếu có file upload thì ghi đè URL trong DTO
 			if (attachmentFile != null)
 			{
@@ -84,16 +73,10 @@ namespace API.Controllers.Mission
 
 
 		// Parent xem danh sách nhiệm vụ của các con mình (có phân trang)
-		[HttpGet("parent-missions")]
+		[HttpGet("parent-missions/{parentId}")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> GetParentMissions(int page = 1, int pageSize = 5)
+        public async Task<IActionResult> GetParentMissions(int parentId, int page = 1, int pageSize = 5)
         {
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim))
-                return UnauthorizedResponse();
-
-            var parentId = int.Parse(parentIdClaim);
-
             var missions = await _missionService.ParentGetMissionsAsync(parentId, page, pageSize);
             return OkResponse(missions, "List of missions for your children");
         }

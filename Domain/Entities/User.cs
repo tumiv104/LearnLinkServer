@@ -34,5 +34,6 @@ namespace Domain.Entities
 		public ICollection<Reward> Rewards { get; set; }
 		public ICollection<Redemption> Redemptions { get; set; }
 		public ICollection<Payment> Payments { get; set; }
-	}
+        public ICollection<ExternalLogin> ExternalLogins { get; set; }
+    }
 }

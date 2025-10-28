@@ -9,5 +9,6 @@ namespace Application.Interfaces.Auth
         Task<AuthResponseDTO?> AuthenticateUserAsync(UserLoginDTO userLoginDTO);
         Task<AuthResponseDTO?> RefreshTokenAsync(string refreshToken);
         Task<bool> RevokeRefreshTokenAsync(string refreshToken);
+        Task<AuthResponseDTO?> AuthenticateGoogleAsync(GoogleLoginRequest request);
     }
 }

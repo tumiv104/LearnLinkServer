@@ -50,9 +50,6 @@ public class ParentService : IParentService
         if (string.IsNullOrWhiteSpace(childDTO.Password) || childDTO.Password.Length < 6 || childDTO.Password.Contains(" "))
             return "Password must be at least 6 characters and contain no spaces.";
 
-        if (childDTO.Dob >= DateTime.UtcNow.Date)
-            return "Invalid date of birth.";
-
         if (await _context.Users.AnyAsync(u => u.Email == childDTO.Email))
             return "Email already exists.";
 

@@ -23,16 +23,10 @@ namespace API.Controllers
             _env = env;
         }
 
-        [HttpGet("profile")]
+        [HttpGet("profile/{userId}")]
         [Authorize] 
-        public async Task<IActionResult> GetProfile()
+        public async Task<IActionResult> GetProfile(int userId)
         {   
-            var userIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(userIdClaim))
-                return UnauthorizedResponse();
-
-            var userId = int.Parse(userIdClaim);
-
             var profile = await _userService.GetUserProfileAsync(userId);
             if (profile == null)
                 return NotFoundResponse("User not found");
@@ -40,16 +34,10 @@ namespace API.Controllers
             return OkResponse(profile, "User profile");
         }
 
-        [HttpPut("profile")]
+        [HttpPut("profile/{userId}")]
         [Authorize]
-        public async Task<IActionResult> EditProfile([FromForm] UserProfileUpdateDTO updateDTO)
+        public async Task<IActionResult> EditProfile(int userId, [FromForm] UserProfileUpdateDTO updateDTO)
         {
-            var userIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(userIdClaim))
-                return UnauthorizedResponse();
-
-            var userId = int.Parse(userIdClaim);
-
             if (updateDTO.AvatarFile != null)
             {
                 using var stream = updateDTO.AvatarFile.OpenReadStream();
