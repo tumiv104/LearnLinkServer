@@ -26,15 +26,10 @@ namespace API.Controllers.Submission
 		}
 
         // Phụ huynh duyệt submission
-        [HttpPost("approve")]
+        [HttpPost("{parentId}/approve")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> ApproveSubmission(ReviewSubmissionDTO submissionDto)
+        public async Task<IActionResult> ApproveSubmission(int parentId, ReviewSubmissionDTO submissionDto)
         {
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
-
-            int parentId = int.Parse(parentIdClaim);
-
             var result = await _submissionService.ApproveSubmissionAsync(submissionDto, parentId);
             if (!result.Success)
                 return BadRequestResponse(result.Message);
@@ -43,15 +38,10 @@ namespace API.Controllers.Submission
         }
 
         // Phụ huynh từ chối submission
-        [HttpPost("reject")]
+        [HttpPost("{parentId}/reject")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> RejectSubmission(ReviewSubmissionDTO dto)
+        public async Task<IActionResult> RejectSubmission(int parentId, ReviewSubmissionDTO dto)
         {
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
-
-            int parentId = int.Parse(parentIdClaim);
-
             var result = await _submissionService.RejectSubmissionAsync(dto, parentId);
             if (!result.Success)
                 return BadRequestResponse(result.Message);
@@ -136,14 +126,10 @@ namespace API.Controllers.Submission
 
 
         // Phụ huynh lấy tất cả submission của họ
-        [HttpGet("parents")]
+        [HttpGet("parents/{parentId}")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> GetAllSubmissionsForParents([FromQuery] int page = 1, [FromQuery] int pageSize = 5)
+        public async Task<IActionResult> GetAllSubmissionsForParents(int parentId, [FromQuery] int page = 1, [FromQuery] int pageSize = 5)
         {
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
-            int parentId = int.Parse(parentIdClaim);
-
             var result = await _submissionService.GetAllSubmissionsForParents(parentId, page, pageSize);
             if (!result.Success)
                 return BadRequestResponse(result.Message);

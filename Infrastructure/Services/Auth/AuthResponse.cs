@@ -216,7 +216,7 @@ namespace Infrastructure.Services.Auth
                 .ThenInclude(u => u.Role)
                 .FirstOrDefaultAsync(e => e.Provider == "Google" && e.ProviderKey == payload.Subject);
 
-            Domain.Entities.User user;
+            Domain.Entities.User? user = null;
 
             if (external != null)
             {
@@ -234,6 +234,7 @@ namespace Infrastructure.Services.Auth
 
                     if (user == null)
                     {
+                        var defaultRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleId == 2);
                         // Tạo user mới
                         user = new Domain.Entities.User
                         {
@@ -242,6 +243,7 @@ namespace Infrastructure.Services.Auth
                             Password = "google", // Google login không dùng password
                             AvatarUrl = payload.Picture,
                             RoleId = 2, // mặc định: Parent/Child tùy hệ thống
+                            Role = defaultRole,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
@@ -268,7 +270,7 @@ namespace Infrastructure.Services.Auth
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    await _emailService.SendWelcomeEmailAsync(user.Email, user.Name);
+                    _ = Task.Run(() => _emailService.SendWelcomeEmailAsync(user.Email, user.Name));
                 }
                 catch
                 {
@@ -276,12 +278,11 @@ namespace Infrastructure.Services.Auth
                 }
                 
             }
-
-            var user1 = await _context.Users.Include(u => u.Role)
-                        .FirstOrDefaultAsync(u => u.Email == payload.Email);
+            if (user == null) return null;
+            
             // Tạo access + refresh token
-            var accessToken = _tokenService.GenerateAccessToken(user1);
-            var refreshToken = _tokenService.GenerateRefreshToken(user1.userId);
+            var accessToken = _tokenService.GenerateAccessToken(user);
+            var refreshToken = _tokenService.GenerateRefreshToken(user.userId);
 
             _context.RefreshTokens.Add(refreshToken);
             await _context.SaveChangesAsync();
