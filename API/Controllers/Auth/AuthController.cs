@@ -23,10 +23,10 @@ namespace API.Controllers.Auth
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequestResponse("invalid input");
             }
             var success = await _authResponse.RegisterUserAsync(userRegisterDTO);
-            if (!success) return BadRequestResponse("Register failed");
+            if (!success) return ConflictResponse("Register failed");
             return OkResponse<object>(null, "register successful");
         }
 
@@ -35,10 +35,10 @@ namespace API.Controllers.Auth
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequestResponse("invalid input");
             }
             var success = await _authResponse.RegisterChildAsync(childRegisterDTO);
-            if (!success) return BadRequestResponse("Register failed");
+            if (!success) return ConflictResponse("Register failed");
             return OkResponse<object>(null, "register successful");
         }
 

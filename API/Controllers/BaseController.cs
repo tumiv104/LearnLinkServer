@@ -27,6 +27,11 @@ namespace API.Controllers
             return NotFound(new ApiResponse<object>(false, message, null, errorCode));
         }
 
+        protected IActionResult ConflictResponse(string message = "Conflict", string errorCode = ErrorCodes.CONFLICT)
+        {
+            return Conflict(new ApiResponse<object>(false, message, null, errorCode));
+        }
+
         protected IActionResult ErrorResponse(string message, string errorCode = ErrorCodes.INTERNAL_SERVER_ERROR, int statusCode = 500)
         {
             var response = new ApiResponse<object>(false, message, null, errorCode);

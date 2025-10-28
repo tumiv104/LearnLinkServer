@@ -29,7 +29,6 @@ namespace API.Controllers.Payment
         [HttpPost("momo-callback")]
         public async Task<IActionResult> MoMoCallback([FromBody] MoMoCallbackRequest callback)
         {
-            Debug.WriteLine("call momo-callback");
             var result = await _paymentService.HandleMoMoCallback(callback);
             if (result) return ErrorResponse("Call back failed");
             Debug.WriteLine("momo-callback true");

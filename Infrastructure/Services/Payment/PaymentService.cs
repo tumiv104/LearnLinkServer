@@ -289,27 +289,33 @@ namespace Infrastructure.Services.Payment
 
                 var verified = payOS.verifyPaymentWebhookData(sdkWebhook);
                 if (verified == null) return false;
-
-                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == verified.orderCode);
-                if (payment == null) return false;
-
-                if (verified.code == "00" || verified.desc.Contains("success", StringComparison.OrdinalIgnoreCase))
+                var status = "fail";
+                if (verified.code == "00" && verified.desc.Contains("success"))
                 {
-                    payment.Status = PaymentStatus.Success;
-
-                    var rate = int.Parse(_config["Payment:PointRate"]);
-                    var points = (int)(payment.Amount / rate);
-
-                    var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
-                    if (point != null)
-                        point.Balance += points;
-                }
-                else
-                {
-                    payment.Status = PaymentStatus.Failed;
+                    status = "success";
                 }
 
-                await _context.SaveChangesAsync();
+                await UpdatePaymentStatus(verified.orderCode.ToString(), status);
+                //var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == verified.orderCode);
+                //if (payment == null) return false;
+
+                //if (verified.code == "00" || verified.desc.Contains("success", StringComparison.OrdinalIgnoreCase))
+                //{
+                //    payment.Status = PaymentStatus.Success;
+
+                //    var rate = int.Parse(_config["Payment:PointRate"]);
+                //    var points = (int)(payment.Amount / rate);
+
+                //    var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
+                //    if (point != null)
+                //        point.Balance += points;
+                //}
+                //else
+                //{
+                //    payment.Status = PaymentStatus.Failed;
+                //}
+
+                //await _context.SaveChangesAsync();
                 return true;
             }
             catch

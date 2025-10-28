@@ -20,33 +20,22 @@ public class ParentController : BaseController
     }
 
     // Parent xem danh sách các con của mình
-    [HttpGet("children")]
+    [HttpGet("{parentId}/children")]
     [Authorize(Roles = "Parent")]
-    public async Task<IActionResult> GetChildren()
+    public async Task<IActionResult> GetChildren(int parentId)
     {
-        var parentIdClaim = User.FindFirstValue("id");
-        if (string.IsNullOrEmpty(parentIdClaim))
-            return UnauthorizedResponse();
-
-        var parentId = int.Parse(parentIdClaim);
-
         var children = await _parentService.GetChildrenAsync(parentId);
         return OkResponse(children, "List of your children");
     }
 
-    [HttpPost("children")]
+    [HttpPost("{parentId}/children")]
     [Authorize(Roles = "Parent")]
     public async Task<IActionResult> CreateChild(
+        int parentId,
        [FromForm] ChildCreateDTO childDTO,
        [FromServices] IFileStorage fileStorage,
        [FromServices] IWebHostEnvironment env)
     {
-        var parentIdClaim = User.FindFirstValue("id");
-        if (string.IsNullOrEmpty(parentIdClaim))
-            return UnauthorizedResponse();
-
-        var parentId = int.Parse(parentIdClaim);
-
         if (childDTO.AvatarFile != null)
         {
             using var stream = childDTO.AvatarFile.OpenReadStream();
@@ -62,16 +51,10 @@ public class ParentController : BaseController
     }
 
 
-    [HttpGet("children/{childId}")]
+    [HttpGet("{parentId}/children/{childId}")]
     [Authorize(Roles = "Parent")]
-    public async Task<IActionResult> GetChildProfile(int childId)
+    public async Task<IActionResult> GetChildProfile(int parentId, int childId)
     {
-        var parentIdClaim = User.FindFirstValue("id");
-        if (string.IsNullOrEmpty(parentIdClaim))
-            return UnauthorizedResponse();
-
-        var parentId = int.Parse(parentIdClaim);
-
         var profile = await _parentService.GetChildProfileAsync(parentId, childId);
         if (profile == null)
             return NotFoundResponse("Child not found or does not belong to this parent");
