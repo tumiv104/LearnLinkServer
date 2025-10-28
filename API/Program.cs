@@ -85,6 +85,7 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             builder.Services.AddScoped<IManagerService, ManagerService>();
             builder.Services.AddScoped<IMissionEventService, MissionEventService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IPasswordService, PasswordService>();
             builder.Services.AddHttpContextAccessor();
 
             //enable jwt token

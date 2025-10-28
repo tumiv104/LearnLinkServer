@@ -247,10 +247,10 @@ namespace Infrastructure.Services.Submissions
 		}
 		public async Task<ApiResponse<MissionResponse1DTO>> SubmitMissionAsync(int missionId, int childId, string fileUrl)
 		{
-			if (string.IsNullOrEmpty(fileUrl))
-			{
-				return new ApiResponse<MissionResponse1DTO>(false, "Trẻ bắt buộc phải gửi ảnh để hoàn thành nhiệm vụ.");
-			}
+			//if (string.IsNullOrEmpty(fileUrl))
+			//{
+			//	return new ApiResponse<MissionResponse1DTO>(false, "Trẻ bắt buộc phải gửi ảnh để hoàn thành nhiệm vụ.");
+			//}
 
 			try
 			{
@@ -297,8 +297,8 @@ namespace Infrastructure.Services.Submissions
 				{
 					MissionId = missionId,
 					ChildId = child.userId,
-					FileUrl = fileUrl,
-					SubmittedAt = DateTime.UtcNow,
+                    FileUrl = string.IsNullOrEmpty(fileUrl) ? string.Empty : fileUrl,
+                    SubmittedAt = DateTime.UtcNow,
 					Status = SubmissionStatus.Pending,
 					Feedback = ""
 				};

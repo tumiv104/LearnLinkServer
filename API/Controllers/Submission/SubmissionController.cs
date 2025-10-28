@@ -69,36 +69,37 @@ namespace API.Controllers.Submission
 			return OkResponse(result.Data, result.Message);
 		}
 
-		// Child nộp nhiệm vụ kèm ảnh
-		[HttpPost("missions/{missionId}/submit")]
-		[Authorize(Roles = "Child")]
-		public async Task<IActionResult> SubmitMission(int missionId, IFormFile file)
-		{
-			var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("id");
-			if (string.IsNullOrEmpty(childIdClaim))
-				return Unauthorized(new { message = "Không tìm thấy id trong token" });
+        // Child nộp nhiệm vụ kèm ảnh
+        [HttpPost("missions/{missionId}/submit")]
+        [Authorize(Roles = "Child")]
+        public async Task<IActionResult> SubmitMission(int missionId, IFormFile? file)
+        {
+            var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("id");
+            if (string.IsNullOrEmpty(childIdClaim))
+                return Unauthorized(new { message = "Không tìm thấy id trong token" });
 
-			var childId = int.Parse(childIdClaim);
-			if (file == null || file.Length == 0)
-				return BadRequest(new { message = "Trẻ bắt buộc phải gửi ảnh để nộp nhiệm vụ." });
+            var childId = int.Parse(childIdClaim);
 
-			string fileUrl;
-			using (var stream = file.OpenReadStream())
-			{
+            string? fileUrl = null;
+
+            if (file != null && file.Length > 0)
+            {
+                using var stream = file.OpenReadStream();
                 fileUrl = await _fileStorage.SaveAsync(stream, file.FileName, "submissions", _env.WebRootPath);
-			}
+            }
 
-			var result = await _submissionService.SubmitMissionAsync(
-				missionId,
-				childId,
+            var result = await _submissionService.SubmitMissionAsync(
+                missionId,
+                childId,
                 fileUrl
             );
 
-			return Ok(result);
-		}
+            return Ok(result);
+        }
 
-		// Phụ huynh xem chi tiết submission
-		[HttpGet("{submissionId}/details/parents")]
+
+        // Phụ huynh xem chi tiết submission
+        [HttpGet("{submissionId}/details/parents")]
 		[Authorize(Roles = "Parent")]
 		public async Task<IActionResult> GetSubmissionDetailsForParents(int submissionId)
 		{
