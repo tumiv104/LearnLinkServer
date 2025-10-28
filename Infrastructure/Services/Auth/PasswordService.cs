@@ -6,6 +6,7 @@ using Application.Interfaces.Email;
 using Domain.Entities;
 using Infrastructure.Data;
 using Application.Interfaces.Auth;
+using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Services.Auth
 {
@@ -13,11 +14,13 @@ namespace Infrastructure.Services.Auth
     {
         private readonly LearnLinkDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
-        public PasswordService(LearnLinkDbContext context, IEmailService emailService)
+        public PasswordService(LearnLinkDbContext context, IEmailService emailService, IConfiguration configuration)
         {
             _context = context;
             _emailService = emailService;
+            _configuration = configuration;
         }
 
         public async Task RequestPasswordResetAsync(string email)
@@ -38,7 +41,9 @@ namespace Infrastructure.Services.Auth
             _context.PasswordResetTokens.Add(resetToken);
             await _context.SaveChangesAsync();
 
-            var resetLink = $"http://localhost:3000/auth/reset-password?token={token}";
+            var feUrl = _configuration["Settings:FeUrl"];
+
+            var resetLink = $"{feUrl}/auth/reset-password?token={token}";
             await _emailService.SendPasswordResetEmailAsync(email, resetLink, user.Name ?? user.Email);
         }
 
