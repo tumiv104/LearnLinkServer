@@ -172,7 +172,7 @@ namespace Infrastructure.Services.Auth
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                await _emailService.SendWelcomeEmailAsync(user.Email, user.Name);
+                _ = Task.Run(() => _emailService.SendWelcomeEmailAsync(user.Email, user.Name));
             }
             catch
             {
