@@ -29,7 +29,6 @@ namespace API.Controllers.Payment
         [HttpPost("momo-callback")]
         public async Task<IActionResult> MoMoCallback([FromBody] MoMoCallbackRequest callback)
         {
-            Debug.WriteLine("call momo-callback");
             var result = await _paymentService.HandleMoMoCallback(callback);
             if (result) return ErrorResponse("Call back failed");
             Debug.WriteLine("momo-callback true");
@@ -39,7 +38,7 @@ namespace API.Controllers.Payment
         [HttpPost("update-status")]
         public async Task<IActionResult> UpdatePaymentStatus(UpdatePaymentRequest updatePaymentRequest)
         {
-            var res = await _paymentService.UpdatePaymentStatus(updatePaymentRequest.paymentId, updatePaymentRequest.status);
+            var res = await _paymentService.UpdatePaymentStatus(updatePaymentRequest.orderCode, updatePaymentRequest.status);
             return OkResponse(res);
         }
 
@@ -60,11 +59,30 @@ namespace API.Controllers.Payment
             return OkResponse(true);
         }
 
+        [HttpPost("payos-premium-create")]
+        public async Task<IActionResult> CreatePayOSPremium([FromBody] CreatePaymentRequest request)
+        {
+            var payUrl = await _paymentService.UpgradeToPremiumAsync(request.ParentId, request.Amount);
+            return OkResponse<string>(payUrl);
+        }
+
+
+        [HttpPost("payos-premium-callback")]
+        public async Task<IActionResult> PayOSPremiumCallback([FromBody] PayOSWebhookDto webhook)
+        {
+            var result = await _paymentService.HandlePayOSCallbackForPremium(webhook);
+            if (!result)
+                return ErrorResponse("Callback verify failed for premium upgrade");
+
+            return OkResponse(true);
+        }
+
+
     }
 
     public class UpdatePaymentRequest
     {
-        public int paymentId { get; set; }
+        public string orderCode { get; set; }
         public string status { get; set; }
     }
 }

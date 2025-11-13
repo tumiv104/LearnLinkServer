@@ -59,7 +59,8 @@ namespace Infrastructure.Services.User
                 CreatedAt = user.CreatedAt,
                 TotalPoints = totalPoints,
                 ChildrenCount = childrenCount,
-                ParentName = parentName
+                ParentName = parentName,
+                IsPremium = user.IsPremium
             };
         }
         public async Task<bool> UpdateUserProfileAsync(int userId, UserProfileUpdateDTO updateDTO)

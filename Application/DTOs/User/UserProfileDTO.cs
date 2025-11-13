@@ -23,5 +23,6 @@ namespace Application.DTOs.User
 
         // Nếu là Child:
         public string? ParentName { get; set; }
+        public bool IsPremium { get; set; }
     }
 }

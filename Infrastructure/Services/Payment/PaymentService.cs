@@ -152,22 +152,47 @@ namespace Infrastructure.Services.Payment
             return BitConverter.ToString(hash).Replace("-", "").ToLower();
         }
 
-        public async Task<bool> UpdatePaymentStatus(int paymentId, string status)
+        private long GenerateOrderCode(int paymentId)
         {
-            var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string orderCodeStr = $"{timestamp}{paymentId:D4}";
+
+            return long.Parse(orderCodeStr);
+        }
+
+        private int ExtractPaymentIdFromOrderCode(string orderCodeStr)
+        {
+            string paymentIdStr = orderCodeStr[^4..];
+
+            return int.Parse(paymentIdStr);
+        }
+
+        public async Task<bool> UpdatePaymentStatus(string orderCode, string status)
+        {
+            var paymentId = ExtractPaymentIdFromOrderCode(orderCode);
+            var payment = await _context.Payments.Include(p => p.Parent).FirstOrDefaultAsync(p => p.PaymentId == paymentId);
             if (payment == null) return false;
 
             if (status == "success") // thanh toán thành công
             {
                 payment.Status = PaymentStatus.Success;
 
-                // cộng điểm cho parent
-                var pointRate = int.Parse(_config["Payment:PointRate"]);
-                var points = (int)(payment.Amount/pointRate);
-                var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
-                if (point != null)
+                if (payment.Purpose == PaymentPurpose.TopUpPoints)
                 {
-                    point.Balance += points;
+                    // cộng điểm cho parent
+                    var pointRate = int.Parse(_config["Payment:PointRate"]);
+                    var points = (int)(payment.Amount / pointRate);
+                    var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
+                    if (point != null)
+                    {
+                        point.Balance += points;
+                    }
+                }
+                else if (payment.Purpose == PaymentPurpose.UpgradePremium)
+                {
+                    // upgrade to premium
+                    payment.Parent.IsPremium = true;
+                    payment.Parent.UpdatedAt = DateTime.UtcNow;
                 }
             }
             else
@@ -203,14 +228,17 @@ namespace Infrastructure.Services.Payment
                 Currency = "VND",
                 Method = "PayOS",
                 Status = PaymentStatus.Pending,
+                Purpose = PaymentPurpose.TopUpPoints,
                 CreatedAt = DateTime.UtcNow
             };
 
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
 
+            var orderCode = GenerateOrderCode(payment.PaymentId);
+
             var paymentData = new PaymentData(
-                payment.PaymentId,
+                orderCode,
                 (int)amount,
                 "Top up points via PayOS",
                 items,
@@ -261,20 +289,137 @@ namespace Infrastructure.Services.Payment
 
                 var verified = payOS.verifyPaymentWebhookData(sdkWebhook);
                 if (verified == null) return false;
+                var status = "fail";
+                if (verified.code == "00" && verified.desc.Contains("success"))
+                {
+                    status = "success";
+                }
 
-                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == verified.orderCode);
+                await UpdatePaymentStatus(verified.orderCode.ToString(), status);
+                //var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == verified.orderCode);
+                //if (payment == null) return false;
+
+                //if (verified.code == "00" || verified.desc.Contains("success", StringComparison.OrdinalIgnoreCase))
+                //{
+                //    payment.Status = PaymentStatus.Success;
+
+                //    var rate = int.Parse(_config["Payment:PointRate"]);
+                //    var points = (int)(payment.Amount / rate);
+
+                //    var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
+                //    if (point != null)
+                //        point.Balance += points;
+                //}
+                //else
+                //{
+                //    payment.Status = PaymentStatus.Failed;
+                //}
+
+                //await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<string> UpgradeToPremiumAsync(int userId, decimal amount)
+        {
+            var payment = new Domain.Entities.Payment
+            {
+                ParentId = userId,
+                Amount = amount,
+                Currency = "VND",
+                Method = "PayOS", 
+                Status = PaymentStatus.Pending,
+                Purpose = PaymentPurpose.UpgradePremium,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Payments.Add(payment);
+            await _context.SaveChangesAsync();
+
+            var config = _config.GetSection("Payment:PayOS");
+            var clientId = config["ClientId"];
+            var apiKey = config["ApiKey"];
+            var checksumKey = config["ChecksumKey"];
+            var returnUrl = config["ReturnUrl"];
+            var cancelUrl = config["CancelUrl"];
+
+            var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            var items = new List<ItemData>
+                {
+                    new ItemData("LearnLink Premium", 1, (int)amount)
+                };
+
+            var orderCode = GenerateOrderCode(payment.PaymentId);
+
+            var paymentData = new PaymentData(
+                orderCode,
+                (int)amount,
+                "LearnLink Premium Upgrade",
+                items,
+                cancelUrl,
+                returnUrl
+            );
+
+            var response = await payOS.createPaymentLink(paymentData);
+
+            return response.checkoutUrl;
+        }
+
+        public async Task<bool> HandlePayOSCallbackForPremium(PayOSWebhookDto webhookData)
+        {
+            var config = _config.GetSection("Payment:PayOS");
+            var clientId = config["ClientId"];
+            var apiKey = config["ApiKey"];
+            var checksumKey = config["ChecksumKey"];
+
+            var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            try
+            {
+                var sdkWebhook = new WebhookType(
+                     webhookData.Code,
+                     webhookData.Desc,
+                     webhookData.Success,
+                     new WebhookData(
+                        orderCode: webhookData.Data.OrderCode,
+                        amount: (int)webhookData.Data.Amount,
+                        description: webhookData.Data.Description ?? "",
+                        accountNumber: null,
+                        reference: null,
+                        transactionDateTime: webhookData.Data.TransactionDateTime.ToString("O"),
+                        currency: "VND",
+                        paymentLinkId: null,
+                        code: webhookData.Code,
+                        desc: webhookData.Desc,
+                        counterAccountBankId: null,
+                        counterAccountBankName: null,
+                        counterAccountName: null,
+                        counterAccountNumber: null,
+                        virtualAccountName: null,
+                        virtualAccountNumber: null
+                     ),
+                     webhookData.Signature
+                 );
+
+                var verified = payOS.verifyPaymentWebhookData(sdkWebhook);
+                if (verified == null) return false;
+
+                var payment = await _context.Payments
+                    .Include(p => p.Parent)
+                    .FirstOrDefaultAsync(p => p.PaymentId == verified.orderCode);
                 if (payment == null) return false;
 
                 if (verified.code == "00" || verified.desc.Contains("success", StringComparison.OrdinalIgnoreCase))
                 {
                     payment.Status = PaymentStatus.Success;
 
-                    var rate = int.Parse(_config["Payment:PointRate"]);
-                    var points = (int)(payment.Amount / rate);
-
-                    var point = await _context.Points.FirstOrDefaultAsync(w => w.UserId == payment.ParentId);
-                    if (point != null)
-                        point.Balance += points;
+                    payment.Parent.IsPremium = true;
+                    payment.Parent.UpdatedAt = DateTime.UtcNow;
                 }
                 else
                 {
@@ -289,5 +434,7 @@ namespace Infrastructure.Services.Payment
                 return false;
             }
         }
+
+
     }
 }

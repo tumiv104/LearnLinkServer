@@ -7,7 +7,8 @@ namespace Infrastructure.Data
 	{
 		public LearnLinkDbContext(DbContextOptions<LearnLinkDbContext> options) : base(options) { }
 
-		public DbSet<Role> Roles { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<Role> Roles { get; set; }
 		public DbSet<User> Users { get; set; }
 		public DbSet<ParentChild> ParentChildren { get; set; }
 		public DbSet<Mission> Missions { get; set; }
@@ -21,6 +22,7 @@ namespace Infrastructure.Data
 		public DbSet<Notification> Notifications { get; set; }
 		public DbSet<Payment> Payments { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<ExternalLogin> ExternalLogins { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
@@ -105,7 +107,13 @@ namespace Infrastructure.Data
 				.HasConversion<string>()
 				.HasMaxLength(20);
 
-			base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ExternalLogin>()
+				.HasOne(el => el.User)
+				.WithMany(u => u.ExternalLogins)
+				.HasForeignKey(el => el.UserId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+            base.OnModelCreating(modelBuilder);
 		}
 	}
 }

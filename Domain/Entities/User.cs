@@ -18,7 +18,8 @@ namespace Domain.Entities
 		public string Password { get; set; }
 		public DateTime? Dob { get; set; }
 		public string? AvatarUrl { get; set; }
-		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsPremium { get; set; } = false; //Thêm mới ngày 22/10/2025
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
 		// Navigation properties
@@ -33,5 +34,6 @@ namespace Domain.Entities
 		public ICollection<Reward> Rewards { get; set; }
 		public ICollection<Redemption> Redemptions { get; set; }
 		public ICollection<Payment> Payments { get; set; }
-	}
+        public ICollection<ExternalLogin> ExternalLogins { get; set; }
+    }
 }

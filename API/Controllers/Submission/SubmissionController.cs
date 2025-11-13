@@ -26,15 +26,10 @@ namespace API.Controllers.Submission
 		}
 
         // Phụ huynh duyệt submission
-        [HttpPost("approve")]
+        [HttpPost("{parentId}/approve")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> ApproveSubmission(ReviewSubmissionDTO submissionDto)
+        public async Task<IActionResult> ApproveSubmission(int parentId, ReviewSubmissionDTO submissionDto)
         {
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
-
-            int parentId = int.Parse(parentIdClaim);
-
             var result = await _submissionService.ApproveSubmissionAsync(submissionDto, parentId);
             if (!result.Success)
                 return BadRequestResponse(result.Message);
@@ -43,15 +38,10 @@ namespace API.Controllers.Submission
         }
 
         // Phụ huynh từ chối submission
-        [HttpPost("reject")]
+        [HttpPost("{parentId}/reject")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> RejectSubmission(ReviewSubmissionDTO dto)
+        public async Task<IActionResult> RejectSubmission(int parentId, ReviewSubmissionDTO dto)
         {
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
-
-            int parentId = int.Parse(parentIdClaim);
-
             var result = await _submissionService.RejectSubmissionAsync(dto, parentId);
             if (!result.Success)
                 return BadRequestResponse(result.Message);
@@ -79,36 +69,37 @@ namespace API.Controllers.Submission
 			return OkResponse(result.Data, result.Message);
 		}
 
-		// Child nộp nhiệm vụ kèm ảnh
-		[HttpPost("missions/{missionId}/submit")]
-		[Authorize(Roles = "Child")]
-		public async Task<IActionResult> SubmitMission(int missionId, IFormFile file)
-		{
-			var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("id");
-			if (string.IsNullOrEmpty(childIdClaim))
-				return Unauthorized(new { message = "Không tìm thấy id trong token" });
+        // Child nộp nhiệm vụ kèm ảnh
+        [HttpPost("missions/{missionId}/submit")]
+        [Authorize(Roles = "Child")]
+        public async Task<IActionResult> SubmitMission(int missionId, IFormFile? file)
+        {
+            var childIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("id");
+            if (string.IsNullOrEmpty(childIdClaim))
+                return Unauthorized(new { message = "Không tìm thấy id trong token" });
 
-			var childId = int.Parse(childIdClaim);
-			if (file == null || file.Length == 0)
-				return BadRequest(new { message = "Trẻ bắt buộc phải gửi ảnh để nộp nhiệm vụ." });
+            var childId = int.Parse(childIdClaim);
 
-			string fileUrl;
-			using (var stream = file.OpenReadStream())
-			{
+            string? fileUrl = null;
+
+            if (file != null && file.Length > 0)
+            {
+                using var stream = file.OpenReadStream();
                 fileUrl = await _fileStorage.SaveAsync(stream, file.FileName, "submissions", _env.WebRootPath);
-			}
+            }
 
-			var result = await _submissionService.SubmitMissionAsync(
-				missionId,
-				childId,
+            var result = await _submissionService.SubmitMissionAsync(
+                missionId,
+                childId,
                 fileUrl
             );
 
-			return Ok(result);
-		}
+            return Ok(result);
+        }
 
-		// Phụ huynh xem chi tiết submission
-		[HttpGet("{submissionId}/details/parents")]
+
+        // Phụ huynh xem chi tiết submission
+        [HttpGet("{submissionId}/details/parents")]
 		[Authorize(Roles = "Parent")]
 		public async Task<IActionResult> GetSubmissionDetailsForParents(int submissionId)
 		{
@@ -136,14 +127,10 @@ namespace API.Controllers.Submission
 
 
         // Phụ huynh lấy tất cả submission của họ
-        [HttpGet("parents")]
+        [HttpGet("parents/{parentId}")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> GetAllSubmissionsForParents([FromQuery] int page = 1, [FromQuery] int pageSize = 5)
+        public async Task<IActionResult> GetAllSubmissionsForParents(int parentId, [FromQuery] int page = 1, [FromQuery] int pageSize = 5)
         {
-            var parentIdClaim = User.FindFirstValue("id");
-            if (string.IsNullOrEmpty(parentIdClaim)) return UnauthorizedResponse();
-            int parentId = int.Parse(parentIdClaim);
-
             var result = await _submissionService.GetAllSubmissionsForParents(parentId, page, pageSize);
             if (!result.Success)
                 return BadRequestResponse(result.Message);
