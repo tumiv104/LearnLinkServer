@@ -16,7 +16,7 @@ namespace Domain.Entities
 		public int ChildId { get; set; }
 		public User Child { get; set; }
 
-		public string FileUrl { get; set; }
+		public string? FileUrl { get; set; }
 		public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
 		public SubmissionStatus Status { get; set; } // pending | approved | rejected
 		public string Feedback { get; set; }
@@ -26,8 +26,8 @@ namespace Domain.Entities
 
 	public enum SubmissionStatus
 	{
-		Pending,
-		Approved,
-		Rejected
+		Pending = 0,
+		Approved = 1,
+		Rejected = 2
 	}
 }

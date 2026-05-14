@@ -23,10 +23,11 @@ namespace Infrastructure.Services.Auth
             _configuration = configuration;
         }
 
-        public string GenerateAccessToken(User user)
+        public string GenerateAccessToken(Domain.Entities.User user)
         {
             var claims = new[]
             {
+                new Claim("id", user.userId.ToString()),
                 new Claim("email", user.Email),
                 new Claim("role", user.Role.Name),
                 new Claim("name", user.Name)

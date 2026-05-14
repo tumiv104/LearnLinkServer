@@ -1,12 +1,41 @@
 
 using API.Extensions;
 using Application.Interfaces.Auth;
+using Application.Interfaces.Common;
+using Application.Interfaces.Dashboard;
+using Application.Interfaces.Mission;
+using Application.Interfaces.Missions;
+using Application.Interfaces.Report;
+using Application.Interfaces.Payment;
+using Application.Interfaces.Points;
+using Application.Interfaces.Submission;
+using Application.Interfaces.User;
 using Infrastructure.Data;
+using Infrastructure.Hubs;
 using Infrastructure.Services.Auth;
+using Infrastructure.Services.Common;
+using Infrastructure.Services.Dashboard;
+using Infrastructure.Services.Mission;
+using Infrastructure.Services.Missions;
+using Infrastructure.Services.Report;
+using Infrastructure.Services.Payment;
+using Infrastructure.Services.Points;
+using Infrastructure.Services.Submissions;
+using Infrastructure.Services.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Application.Interfaces.Shop;
+using Application.Interfaces.Product;
+using Infrastructure.Services.Shop;
+using Infrastructure.Services.Product;
+using Application.Interfaces.Notification;
+using Infrastructure.Services.Notification;
+using Application.Interfaces.Manager;
+using Infrastructure.Services.Manager;
+using Application.Interfaces.Email;
+using Infrastructure.Services.Email;
 
 namespace API
 {
@@ -15,6 +44,17 @@ namespace API
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            var port = Environment.GetEnvironmentVariable("PORT") ?? "8888";
+
+            if (builder.Environment.IsProduction())
+            {
+                builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+            }
+            else
+            {
+                builder.WebHost.UseUrls($"https://localhost:{port}");
+            }
 
             // Add services to the container.
 
@@ -26,8 +66,26 @@ namespace API
             builder.Services.AddDbContext<LearnLinkDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
+            builder.Services.AddHttpClient();
+
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IAuthResponse, AuthResponse>();
+            builder.Services.AddScoped<IMissionService, MissionService>();
+            builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
+            builder.Services.AddScoped<IParentService, ParentService>();
+            builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+            builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IReportService, ReportService>();
+            builder.Services.AddScoped<IDashboardService, DashboardService>();
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddScoped<IPointService, PointService>();
+            builder.Services.AddScoped<IShopService, ShopService>();
+            builder.Services.AddScoped<IProductService, ProductService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<IManagerService, ManagerService>();
+            builder.Services.AddScoped<IMissionEventService, MissionEventService>();
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IPasswordService, PasswordService>();
             builder.Services.AddHttpContextAccessor();
 
             //enable jwt token
@@ -52,13 +110,15 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 
             });
 
+            builder.Services.AddSignalR();
+
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowSpecificOrigin", policy =>
                 {
                     policy
                     // Only allow these origins
-                    .WithOrigins("http://localhost:3000")
+                    .WithOrigins("http://localhost:3000", "https://learnlinkk.vercel.app")
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
@@ -72,17 +132,18 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
+                app.UseHttpsRedirection();
             }
 
             app.UseGlobalExceptionHandling();
-
-            app.UseHttpsRedirection();
 
             app.UseCors("AllowSpecificOrigin");
 
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseStaticFiles();
 
+            app.MapHub<MissionHub>("/hubs/mission");
 
             app.MapControllers();
 

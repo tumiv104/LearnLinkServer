@@ -7,7 +7,8 @@ namespace Infrastructure.Data
 	{
 		public LearnLinkDbContext(DbContextOptions<LearnLinkDbContext> options) : base(options) { }
 
-		public DbSet<Role> Roles { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<Role> Roles { get; set; }
 		public DbSet<User> Users { get; set; }
 		public DbSet<ParentChild> ParentChildren { get; set; }
 		public DbSet<Mission> Missions { get; set; }
@@ -15,10 +16,13 @@ namespace Infrastructure.Data
 		public DbSet<Point> Points { get; set; }
 		public DbSet<Transaction> Transactions { get; set; }
 		public DbSet<Reward> Rewards { get; set; }
+		public DbSet<Shop> Shops { get; set; }
+		public DbSet<Product> Products { get; set; }
 		public DbSet<Redemption> Redemptions { get; set; }
 		public DbSet<Notification> Notifications { get; set; }
 		public DbSet<Payment> Payments { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<ExternalLogin> ExternalLogins { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
@@ -65,9 +69,15 @@ namespace Infrastructure.Data
 				.HasForeignKey(r => r.ChildId)
 				.OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Redemption>()
+				.HasOne(r => r.Product)
+				.WithMany(p => p.Redemptions)
+				.HasForeignKey(r => r.ProductId)
+				.OnDelete(DeleteBehavior.Restrict);
 
-			// Enum mapping => lưu string thay vì int
-			modelBuilder.Entity<Mission>()
+
+            // Enum mapping => lưu string thay vì int
+            modelBuilder.Entity<Mission>()
 				.Property(t => t.Status)
 				.HasConversion<string>()
 				.HasMaxLength(20);
@@ -97,7 +107,13 @@ namespace Infrastructure.Data
 				.HasConversion<string>()
 				.HasMaxLength(20);
 
-			base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ExternalLogin>()
+				.HasOne(el => el.User)
+				.WithMany(u => u.ExternalLogins)
+				.HasForeignKey(el => el.UserId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+            base.OnModelCreating(modelBuilder);
 		}
 	}
 }

@@ -15,14 +15,21 @@ namespace Domain.Entities
 		public decimal Amount { get; set; }
 		public string Currency { get; set; }
 		public string Method { get; set; } // MoMo | ZaloPay | Visa | Mastercard
-		public PaymentStatus Status { get; set; } // pending | success | failed
+        public PaymentPurpose Purpose { get; set; } //Thêm mới ngày 23/10/2025
+        public PaymentStatus Status { get; set; } // pending | success | failed
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 	}
 
 	public enum PaymentStatus
 	{
-		Pending,
-		Success,
-		Failed
+		Pending = 0,
+		Success = 1,
+		Failed = 2
 	}
+
+    public enum PaymentPurpose
+    {
+        TopUpPoints,   
+        UpgradePremium 
+    }
 }

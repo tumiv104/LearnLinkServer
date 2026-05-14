@@ -13,7 +13,7 @@ namespace Application.DTOs.Common
             Success = success;
             Message = message;
             Data = data;
-            ErrorCode = errorCode;
+            ErrorCode = errorCode;  
         }
     }
 }
